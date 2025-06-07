@@ -2,13 +2,13 @@
 
 This Repository is experimenting with GA test-generation in combination with fuzzing approaches.
 
-## Getting started
+**IMPORTANT:** Run all the console code in the directory of this readme file.
+
+## Getting Started 🚀
 
 Let's start by installing the necessary packages 📦
 
 Afterwards, you can run the [installation testing notebook](notebooks/installation_testing.ipynb) to see if pynguin and fuzzingbook work.
-
-**IMPORTANT:** *Run the console code in the directory of this readme file*
 
 ### Using `conda`
 
@@ -182,27 +182,27 @@ rm -rf pen_fuz    # or rm -rf .venv if you used the default name
 
 </details>
 
-## Folder structure
+## Folder Structure 🗂️
 
 ```text
 penguin_and_fuzzingbook/
 ├── .github/workflows/          # GitHub Workflow Configuration
-├── documents/                  # Project planning and documentation
-├── notebooks/                  # Jupyter notebooks for experimentation
-├── scripts/                    # Python scripts
-|   ├── config.py               # Settings of environmental variables
-|   └── examples/               # Functions for benchmarking the approaches
-├── pynguin_0_41_0/             # Cloned pynguin repository (version 0.41.0)
-|   ├── README.md               # Documentation of pynguin
-|   └── src/pynguin/            # pynguin package code
-├── .gitignore                  # File to exclude folders or files from GitHub
-├── LICENSE                     # License for this repository
-├── requirements.txt            # Extra library requirements
-├── pyproject.toml              # Configurate style checks
+├── documents/                  # Project Planning and Documentation
+├── notebooks/                  # Jupyter Notebooks for Experimentation
+├── scripts/                    # Python Scripts
+|   ├── config.py               # Settings of Environmental Variables
+|   └── examples/               # Functions for Benchmarking the Approaches
+├── pynguin_0_41_0/             # Cloned Pynguin Repository (version 0.41.0)
+|   ├── README.md               # Documentation of Pynguin
+|   └── src/pynguin/            # Pynguin Code
+├── .gitignore                  # Specified Files and Directories to Be Excluded from Git Version Control
+├── LICENSE                     # License for this Repository
+├── requirements.txt            # Extra Library Requirements
+├── pyproject.toml              # Configurate Style Checks
 └── README.md
 ```
 
-## Code Style
+## Code Style 💅
 
 Run `ruff` to find style issues in your code:
 

@@ -1,4 +1,4 @@
-# penguin 🐧 and book 📕
+# Penguin 🐧 and Book 📕
 
 This Repository is experimenting with GA test-generation in combination with fuzzing approaches.
 
@@ -192,13 +192,13 @@ penguin_and_fuzzingbook/
 ├── scripts/                    # Python Scripts
 |   ├── config.py               # Settings of Environmental Variables
 |   └── examples/               # Functions for Benchmarking the Approaches
-├── pynguin_0_41_0/             # Cloned Pynguin Repository (version 0.41.0)
+├── pynguin_0_41_0/             # Cloned Pynguin Repository (Version 0.41.0)
 |   ├── README.md               # Documentation of Pynguin
 |   └── src/pynguin/            # Pynguin Code
-├── .gitignore                  # Specified Files and Directories to Be Excluded from Git Version Control
+├── .gitignore                  # Files and Directories to Be Excluded from Git Version Control
 ├── LICENSE                     # License for this Repository
-├── requirements.txt            # Extra Library Requirements
-├── pyproject.toml              # Configurate Style Checks
+├── requirements.txt            # Library Requirements
+├── pyproject.toml              # Configuration of Style Checks
 └── README.md
 ```
 

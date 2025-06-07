@@ -6,7 +6,7 @@
 #
 # Idea and structure are taken from the pyChecco project, see:
 # https://github.com/ipsw1/pychecco
-# ruff: noqa: E501, ERA001
+# ruff: noqa: ERA001
 
 from bytecode import BasicBlock
 from bytecode import Compare

@@ -54,6 +54,7 @@ def find_python_modules(directory: str) -> list[tuple[str, str]]:
     return modules
 
 def run_pynguin_on_module(module_name, strategy: str | None, budget_seconds: int):
+    print()
     logger.info(f"▶ Running Pynguin on module: {module_name}")
     output_config = TestCaseOutputConfiguration(
         export_strategy=ExportStrategy.PY_TEST,
@@ -114,7 +115,6 @@ def main(strategy: str | None, budget_seconds: int):
     logger.info("Starting Pynguin benchmark with strategy: %s, budget: %d seconds", strategy, budget_seconds)
     ensure_directories()
     modules = find_python_modules(experiment_settings.EXAMPLES_DIR)
-    print(modules)
     if not modules:
         logger.warning(
             "No Python modules found in the specified directory '%s'.",

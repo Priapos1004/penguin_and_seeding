@@ -25,11 +25,24 @@ def setup_logging(focus_on: bool):
 
     # 3) if focus_on, only allow those two modules
     if focus_on:
-        allowed = ["pynguin.custom_seeding"]
+        allowed_modules = ["pynguin.custom_seeding"]
+        allowed_messages = [
+            "Parsed testcases:",
+            "Used search time:",
+        ]
         class FocusFilter(Filter):
             def filter(self, record):
-                # record.name is the logger name
-                return any(record.name.startswith(mod) or not record.name.startswith("pynguin") for mod in allowed)
+                # Allow logs from allowed modules
+                allowed_pynguin_modules_condition = any(record.name.startswith(mod) for mod in allowed_modules)
+                # Allow any other module that does not start with "pynguin"
+                non_pynguin_modules = not record.name.startswith("pynguin")
+                # Allow logs with specific messages
+                allowed_message_condition = any(msg in record.getMessage() for msg in allowed_messages)
+                return (
+                    allowed_pynguin_modules_condition or
+                    non_pynguin_modules or
+                    allowed_message_condition
+                )
         handler.addFilter(FocusFilter())
 
     # 4) attach it

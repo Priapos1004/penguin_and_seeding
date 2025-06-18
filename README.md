@@ -32,19 +32,30 @@ conda remove -yn pen_see --all
 
 ```text
 penguin_and_seeding/
-├── .github/workflows/          # GitHub Workflow Configuration
-├── documents/                  # Project Planning and Documentation
-├── notebooks/                  # Jupyter Notebooks for Experimentation
-├── scripts/                    # Python Scripts
-|   ├── config.py               # Settings of Environmental Variables
-|   └── examples/               # Functions for Benchmarking the Approaches
-├── pynguin_0_41_0/             # Cloned Pynguin Repository (Version 0.41.0)
-|   ├── README.md               # Documentation of Pynguin
-|   └── src/pynguin/            # Pynguin Code
-├── .gitignore                  # Files and Directories to Be Excluded from Git Version Control
-├── LICENSE                     # License for this Repository
-├── requirements.txt            # Library Requirements
-├── pyproject.toml              # Configuration of Style Checks
+├── .github/workflows/                      # GitHub Workflow Configuration
+├── documents/                              # Project Planning and Documentation
+├── notebooks/                              # Jupyter Notebooks for Experimentation
+├── scripts/                                # Python Scripts
+|   ├── config.py                           # Settings of Environmental Variables
+|   ├── logging_config.py                   # Logging Configuration
+|   ├── run_pynguin_benchmark.py            # Benchmark Script
+|   └── examples/                           # Functions for Benchmarking the Approaches
+├── pynguin_0_41_0/                         # Cloned Pynguin Repository (Version 0.41.0)
+|   ├── README.md                           # Documentation of Pynguin
+|   └── src/pynguin/                        # Pynguin Code
+|       ├── configuration.py                # Pynguin Configuration Setup
+|       ├── analyses/seeding.py             # Collection of Seeds
+|       ├── ga/gen...factory.py             # Seeding-Flag Logic
+|       └── custom_seeding                  # Custom Seeding Code
+|           ├── main_seeder.py              # Bridge between Pynguin and Custom Strategies
+|           └── strategy.py                 # Custom Strategies
+|               ├── base_strategy.py        # Strategy Interface
+|               ├── strategy_selector.py    # Strategy Factory
+|               └── *_strategy.py           # Implementation of Different Strategies
+├── .gitignore                              # Files and Directories to Be Excluded from Git Version Control
+├── LICENSE                                 # License for this Repository
+├── requirements.txt                        # Library Requirements
+├── pyproject.toml                          # Configuration of Style Checks
 └── README.md
 ```
 

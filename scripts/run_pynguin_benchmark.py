@@ -1,8 +1,12 @@
+"""Script to run Pynguin on all Python modules in a directory, generate tests, and report coverage."""
+import logging
 import os
 import subprocess
 import sys
 import webbrowser
 
+from config import experiment_settings
+from logging_config import setup_logging
 from pynguin.configuration import (
     Configuration,
     ExportStrategy,
@@ -10,12 +14,14 @@ from pynguin.configuration import (
 )
 from pynguin.generator import run_pynguin, set_configuration
 
-EXAMPLES_DIR = "examples"
-RESULTS_DIR = "pynguin_results"
-HTMLCOV_DIR = "htmlcov"
+setup_logging(
+    focus_on=experiment_settings.FOCUS_ON_LOGGING
+)
+
+logger = logging.getLogger(__name__)
 
 def ensure_directories():
-    os.makedirs(RESULTS_DIR, exist_ok=True)
+    os.makedirs(experiment_settings.RESULTS_DIR, exist_ok=True)
 
 def find_python_modules(directory):
     """Returns list of tuples: (module_name, module_path)"""
@@ -27,15 +33,17 @@ def find_python_modules(directory):
     return modules
 
 def run_pynguin_on_module(module_name, strategy: str | None, budget_seconds: int):
-    print(f"\n▶ Running Pynguin on module: {module_name}")
+    logger.info(f"▶ Running Pynguin on module: {module_name}")
     output_config = TestCaseOutputConfiguration(
         export_strategy=ExportStrategy.PY_TEST,
         format_with_black=True,
-        output_path=RESULTS_DIR
+        output_path=experiment_settings.RESULTS_DIR
     )
+
+    parent_module = experiment_settings.EXAMPLES_DIR.replace("/", ".")
     cfg = Configuration(
         project_path=".",
-        module_name=f"{EXAMPLES_DIR}.{module_name}",
+        module_name=f"{parent_module}.{module_name}",
         test_case_output=output_config
     )
 
@@ -46,37 +54,38 @@ def run_pynguin_on_module(module_name, strategy: str | None, budget_seconds: int
 
     set_configuration(cfg)
     rc = run_pynguin()
-    print(f"Pynguin return code for {module_name}: {rc}")
+    logger.debug(f"Pynguin return code for {module_name}: {rc}")
 
 def run_tests_and_coverage():
+    parent_module = experiment_settings.EXAMPLES_DIR.replace("/", ".")
     cmd = [
         sys.executable, "-m", "coverage", "run",
-        "--source", EXAMPLES_DIR,
-        "-m", "pytest", RESULTS_DIR, "-q"
+        "--source", parent_module,
+        "-m", "pytest", experiment_settings.RESULTS_DIR, "-q"
     ]
-    print("▶ Running:", " ".join(cmd))
+    logger.debug("▶ Running:", " ".join(cmd))
     proc = subprocess.run(cmd, capture_output=True, text=True)
 
-    print(proc.stdout)
+    logger.debug(proc.stdout)
     if proc.returncode != 0:
         print("─── STDERR ───", file=sys.stderr)
         print(proc.stderr, file=sys.stderr)
         raise RuntimeError(f"pytest failed with exit code {proc.returncode}")
 
 def generate_coverage_report():
-    print("\nTests passed. Generating coverage report…\n")
+    logger.info("Tests passed. Generating coverage report…\n")
     subprocess.run([sys.executable, "-m", "coverage", "report", "-m"], check=True)
-    subprocess.run([sys.executable, "-m", "coverage", "html", "-d", HTMLCOV_DIR], check=True)
+    subprocess.run([sys.executable, "-m", "coverage", "html", "-d", experiment_settings.HTMLCOV_DIR], check=True)
 
 def open_coverage_in_browser():
-    abs_path = os.path.abspath(os.path.join(HTMLCOV_DIR, "index.html"))
+    abs_path = os.path.abspath(os.path.join(experiment_settings.HTMLCOV_DIR, "index.html"))
     file_url = f"file://{abs_path}"
-    print(f"\nFile URL:\n{file_url}")
+    logger.info(f"File URL:\n{file_url}")
     webbrowser.open(file_url)
 
 def main(strategy: str | None, budget_seconds: int):
     ensure_directories()
-    modules = find_python_modules(EXAMPLES_DIR)
+    modules = find_python_modules(experiment_settings.EXAMPLES_DIR)
 
     # 1. Generate tests for all modules
     for mod_name, _ in modules:
@@ -91,6 +100,6 @@ def main(strategy: str | None, budget_seconds: int):
 
 if __name__ == "__main__":
     main(
-        strategy="simple",  # Seeding strategy to use, or None for no custom seeding
-        budget_seconds=10   # Budget in seconds for each file
+        strategy=experiment_settings.CUSTOM_SEEDING_STRATEGY,
+        budget_seconds=experiment_settings.BUDGET_PER_FILE_IN_SECONDS
     )

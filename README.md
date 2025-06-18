@@ -8,7 +8,7 @@ This Repository is experimenting with GA test-generation in combination with sou
 
 Let's start by installing the necessary packages 📦
 
-Afterwards, you can run the [installation testing notebook](notebooks/installation_testing.ipynb) to see if pynguin and fuzzingbook work.
+Afterwards, you can run the [installation testing notebook](notebooks/installation_testing.ipynb) to see if pynguin works.
 
 ### Using `conda`
 
@@ -31,7 +31,7 @@ conda remove -yn pen_see --all
 ## Folder Structure 🗂️
 
 ```text
-penguin_and_fuzzingbook/
+penguin_and_seeding/
 ├── .github/workflows/          # GitHub Workflow Configuration
 ├── documents/                  # Project Planning and Documentation
 ├── notebooks/                  # Jupyter Notebooks for Experimentation
@@ -47,6 +47,26 @@ penguin_and_fuzzingbook/
 ├── pyproject.toml              # Configuration of Style Checks
 └── README.md
 ```
+
+## Run Benchmark Script
+
+The configuration for the benchmark run can be changed in [config.py](scripts/config.py).
+
+Afterwards, run the following command:
+
+```shell
+python scripts/run_pynguin_benchmark.py
+```
+
+*No other scripts besides config.py need to be touched :-)*
+
+## Custom Seeding Strategies
+
+The code for the custom seeding strategies can be found in the [custom_seeding](pynguin_0_41_0/src/pynguin/custom_seeding/__init__.py) directory.
+
+The script [main_seeder.py](pynguin_0_41_0/src/pynguin/custom_seeding/main_seeder.py) is the bridge between the pynguin code and our custom seeding.
+
+The interface for our seeding strategies can be found in [base_strategy.py](pynguin_0_41_0/src/pynguin/custom_seeding/strategy/base_strategy.py). The implementations of this interface are then selectable in [strategy_selector.py](pynguin_0_41_0/src/pynguin/custom_seeding/strategy/strategy_selector.py) and handed-over to [main_seeder.py](pynguin_0_41_0/src/pynguin/custom_seeding/main_seeder.py).
 
 ## Code Style 💅
 

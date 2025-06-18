@@ -1,33 +1,28 @@
-import logging
-import sys
-
-
-### Setup for environment variables ###
-class Settings():
-    """
-    This class is used to manage environment variables and application settings.
-    It provides a way to access configuration values throughout the application.
-    """
-    pass
-
+"""Setup for environment variables."""
 class ExperimentSettings():
     """
     This class is used to manage settings specific to experiments.
     It allows for configuration of experiment parameters such as the name,
     involved approaches, and other relevant settings.
     """
-    EXPERIMENT_NAME = "default_experiment"
+    # Root directory of functions under test
+    EXAMPLES_DIR: str = "scripts/examples"
+    # Directory where the resulting test cases will be stored
+    RESULTS_DIR: str = "scripts/pynguin_results"
+    # Directory for files of coverage report
+    HTMLCOV_DIR: str = "scripts/htmlcov"
 
-settings = Settings()
+    # If True, only logs from 'pynguin.custom_seeding' and 
+    # the 'scripts' modules are shown.
+    FOCUS_ON_LOGGING: bool = True
+
+    ################################
+    ### Experiment Configuration ###
+    ################################
+
+    # Custom seeding strategy to use, or None for no custom seeding
+    CUSTOM_SEEDING_STRATEGY: str | None = "simple"
+    # Budget in seconds for each file
+    BUDGET_PER_FILE_IN_SECONDS: int = 10
+
 experiment_settings = ExperimentSettings()
-
-### Setup for logging ###
-def setup_logging():
-    logging_config = {
-        "level": logging.INFO,  # Set to DEBUG during development, INFO/WARNING in prod
-        "format": "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-        "handlers": [
-            logging.StreamHandler(sys.stdout)
-        ],
-    }
-    logging.basicConfig(**logging_config)

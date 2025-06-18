@@ -58,8 +58,12 @@ def compute_seeds(test_cluster: ModuleTestCluster, strategy: str) -> list[Defaul
     """Computes seeds for the given test cluster using the specified strategy."""
     all_seeds: list[DefaultTestCase] = []
 
-    logger.info("Found %s callables under test", test_cluster.num_accessible_objects_under_test())
+    logger.debug(
+        "Found %s callable(s) under test in module",
+        test_cluster.num_accessible_objects_under_test()
+    )
 
+    module: str = ""
     for acc in test_cluster.accessible_objects_under_test:
         # Filter down to functions/methods/constructors
         if not isinstance(acc, GenericCallableAccessibleObject):
@@ -67,6 +71,7 @@ def compute_seeds(test_cluster: ModuleTestCluster, strategy: str) -> list[Defaul
 
         pyobj = acc.callable
         name = pyobj.__name__
+        module = pyobj.__module__
         cd = test_cluster.function_data_for_accessibles[acc]
 
         function_info = MainSeederFunctionOutput(
@@ -93,4 +98,5 @@ def compute_seeds(test_cluster: ModuleTestCluster, strategy: str) -> list[Defaul
         if seeds:
             all_seeds.extend(seeds)
 
+    logger.info("Generated %d seeds for %s with strategy '%s'", len(all_seeds), module, strategy)
     return all_seeds

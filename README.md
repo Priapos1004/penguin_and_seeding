@@ -46,9 +46,9 @@ penguin_and_seeding/
 |       ├── configuration.py                # Pynguin Configuration Setup
 |       ├── analyses/seeding.py             # Collection of Seeds
 |       ├── ga/gen...factory.py             # Seeding-Flag Logic
-|       └── custom_seeding                  # Custom Seeding Code
+|       └── custom_seeding/                 # Custom Seeding Code
 |           ├── main_seeder.py              # Bridge between Pynguin and Custom Strategies
-|           └── strategy.py                 # Custom Strategies
+|           └── strategy/                   # Custom Seeding Strategies
 |               ├── base_strategy.py        # Strategy Interface
 |               ├── strategy_selector.py    # Strategy Factory
 |               └── *_strategy.py           # Implementation of Different Strategies

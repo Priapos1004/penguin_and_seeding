@@ -26,7 +26,7 @@ def find_python_modules(directory):
         modules.append((mod_name, os.path.join(directory, file)))
     return modules
 
-def run_pynguin_on_module(module_name, budget_seconds=30):
+def run_pynguin_on_module(module_name, strategy: str | None, budget_seconds: int):
     print(f"\n▶ Running Pynguin on module: {module_name}")
     output_config = TestCaseOutputConfiguration(
         export_strategy=ExportStrategy.PY_TEST,
@@ -40,6 +40,9 @@ def run_pynguin_on_module(module_name, budget_seconds=30):
     )
 
     cfg.stopping.maximum_search_time = budget_seconds
+    if isinstance(strategy, str):
+        cfg.seeding.initial_population_seeding = True
+        cfg.seeding.initial_population_strategy = strategy
 
     set_configuration(cfg)
     rc = run_pynguin()
@@ -71,13 +74,13 @@ def open_coverage_in_browser():
     print(f"\nFile URL:\n{file_url}")
     webbrowser.open(file_url)
 
-def main():
+def main(strategy: str | None, budget_seconds: int):
     ensure_directories()
     modules = find_python_modules(EXAMPLES_DIR)
 
     # 1. Generate tests for all modules
     for mod_name, _ in modules:
-        run_pynguin_on_module(mod_name)
+        run_pynguin_on_module(mod_name, strategy=strategy, budget_seconds=budget_seconds)
 
     # 2. Run all tests in one coverage run
     run_tests_and_coverage()
@@ -87,4 +90,7 @@ def main():
     open_coverage_in_browser()
 
 if __name__ == "__main__":
-    main()
+    main(
+        strategy="simple",  # Seeding strategy to use, or None for no custom seeding
+        budget_seconds=10   # Budget in seconds for each file
+    )

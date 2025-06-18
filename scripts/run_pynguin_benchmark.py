@@ -1,9 +1,14 @@
 import os
-import sys
 import subprocess
+import sys
 import webbrowser
-from pynguin.configuration import Configuration, TestCaseOutputConfiguration, ExportStrategy
-from pynguin.generator import set_configuration, run_pynguin
+
+from pynguin.configuration import (
+    Configuration,
+    ExportStrategy,
+    TestCaseOutputConfiguration,
+)
+from pynguin.generator import run_pynguin, set_configuration
 
 EXAMPLES_DIR = "examples"
 RESULTS_DIR = "pynguin_results"

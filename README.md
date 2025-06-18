@@ -68,6 +68,8 @@ The script [main_seeder.py](pynguin_0_41_0/src/pynguin/custom_seeding/main_seede
 
 The interface for our seeding strategies can be found in [base_strategy.py](pynguin_0_41_0/src/pynguin/custom_seeding/strategy/base_strategy.py). The implementations of this interface are then selectable in [strategy_selector.py](pynguin_0_41_0/src/pynguin/custom_seeding/strategy/strategy_selector.py) and handed-over to [main_seeder.py](pynguin_0_41_0/src/pynguin/custom_seeding/main_seeder.py).
 
+The specification of the information passed down from Pynguin to the seeding strategies is defined in the schema [MainSeederFunctionOutput](pynguin_0_41_0/src/pynguin/custom_seeding/schema/main_seeder_schema.py).
+
 ## Code Style 💅
 
 Run `ruff` to find style issues in your code:

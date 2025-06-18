@@ -103,16 +103,17 @@ def run_tests_and_coverage() -> bool:
 def generate_coverage_report():
     logger.info("Tests passed. Generating coverage report…\n")
     subprocess.run([sys.executable, "-m", "coverage", "report", "-m"], check=True)
-    subprocess.run([sys.executable, "-m", "coverage", "html", "-d", experiment_settings.HTMLCOV_DIR], check=True)
+    subprocess.run([sys.executable, "-m", "coverage", "html", "-q", "-d", experiment_settings.HTMLCOV_DIR], check=True)
 
 def open_coverage_in_browser():
     abs_path = os.path.abspath(os.path.join(experiment_settings.HTMLCOV_DIR, "index.html"))
     file_url = f"file://{abs_path}"
-    logger.info(f"File URL:\n{file_url}")
+    print()
+    logger.info(f"File URL:\n{file_url}\n")
     webbrowser.open(file_url)
 
 def main(strategy: str | None, budget_seconds: int):
-    logger.info("Starting Pynguin benchmark with strategy: %s, budget: %d seconds", strategy, budget_seconds)
+    logger.info("Starting Pynguin benchmark with strategy: '%s', budget: %d seconds", strategy, budget_seconds)
     ensure_directories()
     modules = find_python_modules(experiment_settings.EXAMPLES_DIR)
     if not modules:

@@ -194,5 +194,5 @@ cython_debug/
 .cursorindexingignore
 
 .DS_Store
-notebooks/pynguin_results
-notebooks/pynguin-report
+**/pynguin_results
+**/pynguin-report

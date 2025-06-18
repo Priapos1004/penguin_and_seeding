@@ -1,9 +1,16 @@
 def palindrome(text: str) -> bool:
+    if not isinstance(text, str):
+        raise TypeError("Input must be a string")
+
     # Remove non-alphanumeric characters and convert to lowercase
     cleaned = ''
     for char in text:
         if char.isalnum():
-            cleaned += char.lower()
+            cleaned += char
+
+    # At least length of 3 chars
+    if len(cleaned) < 3:
+        return False
 
     # Use two-pointer technique to check for palindrome
     left = 0
@@ -16,16 +23,3 @@ def palindrome(text: str) -> bool:
         right -= 1
 
     return True
-
-if __name__ == "__main__":
-    # Example usage
-    test_strings = [
-        "",
-        "Racecar",
-        "Was it a car or a cat I saw?",
-        "No 'x' in Nixon",
-        "Hello, World!",
-    ]
-    for s in test_strings:
-        result = palindrome(s)
-        print(f'"{s}" is a palindrome: {result}')

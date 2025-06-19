@@ -109,24 +109,34 @@ class InitialPopulationProvider:
             stat.track_output_variable(RuntimeVariable.SuitableTestModule, value=False)
             return None
 
-    def collect_testcases(self, module_path: AnyStr | os.PathLike[AnyStr]) -> None:
-        """Collect all test cases from a module.
+    def collect_testcases(
+        self, module_path_or_seeds: str | os.PathLike | list[dtc.DefaultTestCase]
+    ) -> None:
+        """Collect test cases from either a Python file or an in-memory list.
 
         Args:
-            module_path: Path to the module to collect the test cases from
+            module_path_or_seeds: Path to a Python module OR a list of test cases
         """
-        tree = self._get_ast_tree(module_path)
-        if tree is None:
-            logger.info("Provided testcases are not used.")
-            return
-        transformer = AstToTestCaseTransformer(
-            self._test_cluster,
-            config.configuration.test_case_output.assertion_generation
-            != config.AssertionGenerator.NONE,
-            constant_provider=self._constant_provider,
-        )
-        transformer.visit(tree)
-        self._testcases = transformer.testcases
+        if isinstance(module_path_or_seeds, list):
+            # Assume a list of in-memory TestCase objects (already parsed)
+            self._testcases = module_path_or_seeds
+            logger.info("Using provided in-memory test cases (%d).", len(self._testcases))
+        else:
+            # Fall back to old behavior: load from file path and parse AST
+            tree = self._get_ast_tree(module_path_or_seeds)
+            if tree is None:
+                logger.info("Provided testcases are not used.")
+                return
+            transformer = AstToTestCaseTransformer(
+                self._test_cluster,
+                config.configuration.test_case_output.assertion_generation
+                != config.AssertionGenerator.NONE,
+                constant_provider=self._constant_provider,
+            )
+            transformer.visit(tree)
+            self._testcases = transformer.testcases
+            logger.info("Parsed testcases from file: %d", len(self._testcases))
+
         stat.track_output_variable(RuntimeVariable.FoundTestCases, len(self._testcases))
         stat.track_output_variable(RuntimeVariable.CollectedTestCases, len(self._testcases))
         self._mutate_testcases_initially()

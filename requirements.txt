@@ -1,3 +1,4 @@
 ipykernel==6.29.5
 coverage==7.8.2
 ruff==0.11.13
+pydantic-settings==2.9.1

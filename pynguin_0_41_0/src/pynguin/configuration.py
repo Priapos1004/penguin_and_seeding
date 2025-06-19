@@ -292,6 +292,9 @@ class SeedingConfiguration:
     """The path to the file with the pre-existing tests. The path has to include the
     file itself."""
 
+    initial_population_strategy: str = "simple"
+    """The strategy to use for the initial population seeding. The default is 'simple'"""
+
     seeded_testcases_reuse_probability: float = 0.9
     """Probability of using seeded testcases when initial population seeding is
     enabled."""

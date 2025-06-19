@@ -22,6 +22,7 @@ from typing import Generic
 from typing import TypeVar
 
 import pynguin.configuration as config
+from pynguin.custom_seeding.main_seeder import compute_seeds
 import pynguin.ga.algorithms.archive as arch
 import pynguin.ga.chromosome as chrom
 import pynguin.ga.computations as ff
@@ -206,9 +207,25 @@ class TestSuiteGenerationAlgorithmFactory(GenerationAlgorithmFactory[tsc.TestSui
                 constant_provider=self._constant_provider,
             )
             self._logger.info("Collecting and parsing provided testcases.")
-            population_provider.collect_testcases(
-                config.configuration.seeding.initial_population_data
-            )
+            # if the user supplied a file path, use it; otherwise run our analyzer
+            seeds_src = config.configuration.seeding.initial_population_data
+            if seeds_src:
+                # file-based load
+                population_provider.collect_testcases(seeds_src)
+            else:
+                # compute_seeds should return a List[TestCase]
+                # or None if no seeds were found
+                seeds: list = compute_seeds(
+                    test_cluster=self._test_cluster,
+                    strategy=config.configuration.seeding.initial_population_strategy
+                )
+                if seeds:
+                    population_provider.collect_testcases(seeds)
+                else:
+                    self._logger.warning(
+                        "No seeds were found. "
+                        "Please check your configuration or provide a seed file."
+                    )
             if len(population_provider) == 0:
                 self._logger.info("Could not parse any test case")
             else:

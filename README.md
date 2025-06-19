@@ -81,6 +81,20 @@ The interface for our seeding strategies can be found in [base_strategy.py](pyng
 
 The specification of the information passed down from Pynguin to the seeding strategies is defined in the schema [MainSeederFunctionOutput](pynguin_0_41_0/src/pynguin/custom_seeding/schema/main_seeder_schema.py).
 
+### How to Add a New Strategy
+
+1) Create a class that implements the [BaseStrategy](pynguin_0_41_0/src/pynguin/custom_seeding/strategy/base_strategy.py) similar to [SimpleStrategy](pynguin_0_41_0/src/pynguin/custom_seeding/strategy/simple_strategy.py) in `custom_seeding/strategy/` and name the file `*_strategy.py`. The specification of the parameter `function_info: MainSeederFunctionOutput` can be found in [main_seeder_schema.py](pynguin_0_41_0/src/pynguin/custom_seeding/schema/main_seeder_schema.py).
+
+2) Add the new custom strategy as `elif` with `<name of new strategy>` in the [strategy_selector](pynguin_0_41_0/src/pynguin/custom_seeding/strategy/strategy_selector.py) (similar to [SimpleStrategy](pynguin_0_41_0/src/pynguin/custom_seeding/strategy/simple_strategy.py)).
+
+3) You can select in [config.py](scripts/config.py) your new strategy and run the benchmark script with it.
+
+```python
+CUSTOM_SEEDING_STRATEGY: str | None = <name of new strategy>
+```
+
+*Don't change existing scripts besides `strategy_selector.py` in `custom_seeding/`!*
+
 ## Code Style 💅
 
 Run `ruff` to find style issues in your code:

@@ -48,6 +48,7 @@ penguin_and_seeding/
 |       ├── ga/gen...factory.py             # Seeding-Flag Logic
 |       └── custom_seeding/                 # Custom Seeding Code
 |           ├── main_seeder.py              # Bridge between Pynguin and Custom Strategies
+|           ├── schema/                     # Schema to Specify Data Handover
 |           └── strategy/                   # Custom Seeding Strategies
 |               ├── base_strategy.py        # Strategy Interface
 |               ├── strategy_selector.py    # Strategy Factory

@@ -2,6 +2,6 @@
 def two_param_neq(param1, param2: str) -> bool:
     if param1 in "hello world":
         return True
-    if not param2 in "hello world":
+    if param2 not in "hello world":
         return True
     return False

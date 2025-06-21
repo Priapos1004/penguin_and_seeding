@@ -6,7 +6,7 @@ class ExperimentSettings():
     involved approaches, and other relevant settings.
     """
     # Root directory of functions under test
-    EXAMPLES_DIR: str = "scripts/examples"
+    EXAMPLES_DIR: str = "scripts/examples/in_func"
     # Directory where the resulting test cases will be stored
     RESULTS_DIR: str = "scripts/pynguin_results"
     # Directory for files of coverage report
@@ -22,7 +22,7 @@ class ExperimentSettings():
 
     # Custom seeding strategy to use, or None for no custom seeding
     # Example custom seeding strategy: 'simple'
-    CUSTOM_SEEDING_STRATEGY: str | None = "simple"
+    CUSTOM_SEEDING_STRATEGY: str | None = "test"
     # Budget in seconds for each file
     BUDGET_PER_FILE_IN_SECONDS: int = 10
 

@@ -16,41 +16,8 @@ class TestStrategy(BaseStrategy):
         """Initializes the test strategy with function information."""
         super().__init__(function_info)
 
-    def _extract_in_comparisons(self, ast_tree: FunctionDef | AsyncFunctionDef, param_name: str) -> list[str]:
-        """Finds all 'in' comparisons where a parameter is on one side, returning the opposite side."""
-        results = []
-
-        # function for recursive call traversing tree nodes (Should I put this outside?)
-        def visit(node: NodeNG):
-            if isinstance(node, Compare):
-                for op, comparator in node.ops:
-                    # checks whether 'in' is in the operation 
-                    # ATTENTION!!! Not sure if this checks 'in' in operators or the whole statement, might throw errors with parameter named 'in'
-                    if op in ("in"):
-                        left = node.left
-                        right = comparator
-
-                        # Testcase: param is in something
-                        if isinstance(left, Name) and left.name == param_name:
-                            val = self._extract_literal_repr(right)
-                            for i in val:
-                                results.append(i)
-
-                        # Testcase: something is in param
-                        elif isinstance(right, Name) and right.name == param_name:
-                            val = self._extract_literal_repr(left)
-                            for i in val:
-                                results.append(i)
-            
-            # recursively call function for each child node
-            for child in node.get_children():
-                visit(child)
-
-        visit(ast_tree)
-        return results
-
-
-    def _extract_literal_repr(self, node: NodeNG) -> list[str]:
+    @staticmethod
+    def _extract_literal_repr(node: NodeNG) -> list[str]:
         """Extracts a readable representation of a node as either a list of strings."""
         if isinstance(node, Const) and isinstance(node.value, str):
             # when a string is checked they are returned here
@@ -67,6 +34,41 @@ class TestStrategy(BaseStrategy):
             # should the program stop here or return nothing?
             logger.warning("%s could not be parsed.", str(node))
             return
+
+    @staticmethod
+    def _visit(node: NodeNG, param_name: str, results: list[str]):
+        """Traverses node tree and extracts all 'in' related strings for a specific parameter."""
+        if isinstance(node, Compare):
+            for op, comparator in node.ops:
+                # checks whether 'in' is in the operation 
+                # ATTENTION!!! Not sure if this checks 'in' in operators or the whole statement, might throw errors with parameter named 'in'
+                if op in ("in"):
+                    left = node.left
+                    right = comparator
+
+                    # Testcase: param is in something
+                    if isinstance(left, Name) and left.name == param_name:
+                        val = TestStrategy._extract_literal_repr(right)
+                        for i in val:
+                            results.append(i)
+
+                    # Testcase: something is in param
+                    elif isinstance(right, Name) and right.name == param_name:
+                        val = TestStrategy._extract_literal_repr(left)
+                        for i in val:
+                            results.append(i)
+        
+        # recursively call function for each child node
+        for child in node.get_children():
+            TestStrategy.visit(child)
+
+
+    def _extract_in_comparisons(self, ast_tree: FunctionDef | AsyncFunctionDef, param_name: str) -> list[str]:
+        """Finds all 'in' comparisons where a parameter is on one side, returning the opposite side."""
+        results = []
+
+        TestStrategy.visit(ast_tree, param_name, results)
+        return results
 
 
     def _generate_test_cases(self) -> list[list]:

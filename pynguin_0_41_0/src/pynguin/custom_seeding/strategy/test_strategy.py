@@ -16,39 +16,35 @@ class TestStrategy(BaseStrategy):
         """Initializes the test strategy with function information."""
         super().__init__(function_info)
 
-    def _extract_in_comparisons(self, ast_tree: FunctionDef | AsyncFunctionDef, param_name: str) -> list[str]:
+    # function for recursive call traversing tree nodes
+    def visit(self, node: NodeNG, param_name: str, results: list[str]):
+        if isinstance(node, Compare) and len(node.ops) == 1:
+            for op, comparator in node.ops:
+                if op == "in":
+                    left = node.left
+                    right = comparator
+
+                    # Testcase: param is in something
+                    if isinstance(left, Name) and left.name == param_name:
+                        val = self._extract_literal_repr(right)
+                        for i in val:
+                            results.append(i)
+
+                    # Testcase: something is in param
+                    elif isinstance(right, Name) and right.name == param_name:
+                        val = self._extract_literal_repr(left)
+                        for i in val:
+                            results.append(i)
+        
+        # recursively call function for each child node
+        for child in node.get_children():
+            self.visit(child, param_name, results)
+
+    def _extract_in_comparisons(self, param_name: str):
         """Finds all 'in' comparisons where a parameter is on one side, returning the opposite side."""
         results = []
-
-        # function for recursive call traversing tree nodes (Should I put this outside?)
-        def visit(node: NodeNG):
-            if isinstance(node, Compare):
-                for op, comparator in node.ops:
-                    # checks whether 'in' is in the operation 
-                    # ATTENTION!!! Not sure if this checks 'in' in operators or the whole statement, might throw errors with parameter named 'in'
-                    if op in ("in"):
-                        left = node.left
-                        right = comparator
-
-                        # Testcase: param is in something
-                        if isinstance(left, Name) and left.name == param_name:
-                            val = self._extract_literal_repr(right)
-                            for i in val:
-                                results.append(i)
-
-                        # Testcase: something is in param
-                        elif isinstance(right, Name) and right.name == param_name:
-                            val = self._extract_literal_repr(left)
-                            for i in val:
-                                results.append(i)
-            
-            # recursively call function for each child node
-            for child in node.get_children():
-                visit(child)
-
-        visit(ast_tree)
+        self.visit(self.function_info.ast_tree, param_name, results)
         return results
-
 
     def _extract_literal_repr(self, node: NodeNG) -> list[str]:
         """Extracts a readable representation of a node as either a list of strings."""
@@ -74,11 +70,10 @@ class TestStrategy(BaseStrategy):
         tests=[]
         input_parameters = self.get_parameter_names()
         number_input_parameters = len(self.get_parameter_names())
-        ast_tree = self.function_info.ast_tree
 
         # extracts all found 'in' comparisons and parses them into one list
         for par in input_parameters:
-            par_tests = self._extract_in_comparisons(ast_tree, par)
+            par_tests = self._extract_in_comparisons(par)
             for testcase in par_tests:
                 tests.append(testcase)
 

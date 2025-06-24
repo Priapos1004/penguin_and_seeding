@@ -36,13 +36,14 @@ class TestStrategy(BaseStrategy):
             return
 
     @staticmethod
-    def _visit(node: NodeNG, param_name: str, results: list[str]):
+    def _visit(node: NodeNG, param_name: str, results: list[str], operations:tuple[str]):
         """Traverses node tree and extracts all 'in' related strings for a specific parameter."""
         if isinstance(node, Compare):
             for op, comparator in node.ops:
+                logger.info("Op, comparator and node.ops: %s;; %s;; %s;;", op, comparator, node.left)
                 # checks whether 'in' is in the operation 
                 # ATTENTION!!! Not sure if this checks 'in' in operators or the whole statement, might throw errors with parameter named 'in'
-                if op in ("in"):
+                if op in operations:
                     left = node.left
                     right = comparator
 
@@ -60,14 +61,14 @@ class TestStrategy(BaseStrategy):
         
         # recursively call function for each child node
         for child in node.get_children():
-            TestStrategy._visit(child, param_name, results)
+            TestStrategy._visit(child, param_name, results, operations)
 
 
     def _extract_in_comparisons(self, ast_tree: FunctionDef | AsyncFunctionDef, param_name: str) -> list[str]:
         """Finds all 'in' comparisons where a parameter is on one side, returning the opposite side."""
         results = []
 
-        TestStrategy._visit(ast_tree, param_name, results)
+        TestStrategy._visit(ast_tree, param_name, results, ("in"))
         return results
 
 

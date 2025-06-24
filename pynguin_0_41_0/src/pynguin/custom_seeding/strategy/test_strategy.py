@@ -60,14 +60,14 @@ class TestStrategy(BaseStrategy):
         
         # recursively call function for each child node
         for child in node.get_children():
-            TestStrategy.visit(child)
+            TestStrategy._visit(child, param_name, results)
 
 
     def _extract_in_comparisons(self, ast_tree: FunctionDef | AsyncFunctionDef, param_name: str) -> list[str]:
         """Finds all 'in' comparisons where a parameter is on one side, returning the opposite side."""
         results = []
 
-        TestStrategy.visit(ast_tree, param_name, results)
+        TestStrategy._visit(ast_tree, param_name, results)
         return results
 
 

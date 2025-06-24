@@ -3,7 +3,7 @@ import logging
 from pynguin.custom_seeding.schema.main_seeder_schema import MainSeederFunctionOutput
 from pynguin.custom_seeding.strategy.base_strategy import BaseStrategy
 from astroid import (
-    FunctionDef, AsyncFunctionDef, Compare, Name, Const, List, Tuple, NodeNG
+    FunctionDef, AsyncFunctionDef, Compare, Name, Const, List, Tuple, NodeNG, BoolOp
 )
 
 
@@ -36,11 +36,11 @@ class TestStrategy(BaseStrategy):
             return
 
     @staticmethod
-    def _visit(node: NodeNG, param_name: str, results: list[str], operations:tuple[str]):
-        """Traverses node tree and extracts all 'in' related strings for a specific parameter."""
+    def find_parameters(self, node: NodeNG, param_names:list[str], results: list[list[str]], operations:tuple[str]) -> None:
+        """Extracts strings of the values a specific parameter is in, specified by an input list of operations."""
         if isinstance(node, Compare):
             for op, comparator in node.ops:
-                logger.info("Op, comparator and node.ops: %s;; %s;; %s;;", op, comparator, node.left)
+                #logger.info("Op, comparator and node.ops: %s;; %s;; %s;;", op, comparator, node.left)
                 # checks whether 'in' is in the operation 
                 # ATTENTION!!! Not sure if this checks 'in' in operators or the whole statement, might throw errors with parameter named 'in'
                 if op in operations:
@@ -48,48 +48,78 @@ class TestStrategy(BaseStrategy):
                     right = comparator
 
                     # Testcase: param is in something
-                    if isinstance(left, Name) and left.name == param_name:
-                        val = TestStrategy._extract_literal_repr(right)
-                        for i in val:
-                            results.append(i)
+                    if isinstance(left, Name) and left.name in param_names:
+                        if isinstance(right, Const):
+                            values = TestStrategy._extract_literal_repr(right)
+                            for val in values:
+                                for result in results:
+                                    if result[0] == left.name:
+                                        result[1] += val
+                                        break
+                                results.append([left.name, val])
+                            
 
                     # Testcase: something is in param
-                    elif isinstance(right, Name) and right.name == param_name:
-                        val = TestStrategy._extract_literal_repr(left)
-                        for i in val:
-                            results.append(i)
+                    elif isinstance(right, Name) and right.name in param_names:
+                        if isinstance(left, Const):
+                            values = TestStrategy._extract_literal_repr(left)
+                            for val in values:
+                                for result in results:
+                                    if result[0] == right.name:
+                                        result[1] += val
+                                        break
+                                results.append([right.name, val])
+                            
+
+
+    def _visit(self, node: NodeNG, param_name: str, tests: list[str], operations:tuple[str]):
+        """Traverses node tree and extracts all related strings based on specified operations for a specific parameter."""
+        results=[]
+        input_parameters = self.get_parameter_names()
+        number_input_parameters = len(self.get_parameter_names())
+        testcase = []*number_input_parameters
+
+
+        TestStrategy.find_parameters(node, input_parameters, results, operations)
+
+        if isinstance(node,BoolOp) and node.op == "and":
+            for condition in node.values:
+                TestStrategy.find_parameters(condition, input_parameters, results, operations)
         
+        for result in results:
+            idx = input_parameters.index(result[0])
+            testcase[idx] = results[1]
+
+        tests = tests.append(testcase)
+
         # recursively call function for each child node
         for child in node.get_children():
             TestStrategy._visit(child, param_name, results, operations)
 
 
-    def _extract_in_comparisons(self, ast_tree: FunctionDef | AsyncFunctionDef, param_name: str) -> list[str]:
+    def _extract_in_comparisons(self, ast_tree: FunctionDef | AsyncFunctionDef) -> list[list[str]]:
         """Finds all 'in' comparisons where a parameter is on one side, returning the opposite side."""
-        results = []
+        tests = []
 
-        TestStrategy._visit(ast_tree, param_name, results, ("in"))
-        return results
+        TestStrategy._visit(ast_tree, tests, ("in"))
+        return tests
 
 
     def _generate_test_cases(self) -> list[list]:
         """Generates a final set of seeding start cases for the algorithm."""
-        tests=[]
+        tests = []
         input_parameters = self.get_parameter_names()
         number_input_parameters = len(self.get_parameter_names())
         ast_tree = self.function_info.ast_tree
 
         # extracts all found 'in' comparisons and parses them into one list
-        for par in input_parameters:
-            par_tests = self._extract_in_comparisons(ast_tree, par)
-            for testcase in par_tests:
-                tests.append(testcase)
+        
+        tests = tests.append(self._extract_in_comparisons(ast_tree))
+
 
         # returns seedings with all parameters set to the 'in' parameters at once
         if tests != []:
-            return [
-                [input]*number_input_parameters for input in tests
-                ]
+            return tests
         # when no 'in' parameters are found a generic test case is returned
         else: 
             return [

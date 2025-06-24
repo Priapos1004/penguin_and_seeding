@@ -1,5 +1,5 @@
 """Tests behaviour of seeding strategies with contradicting string comparisons."""
 def contradiction(param: str) -> bool:
-    if param == "arbok" and param == "kobra":
+    if param == "rettan" and param == "natter":
         return True
     return False

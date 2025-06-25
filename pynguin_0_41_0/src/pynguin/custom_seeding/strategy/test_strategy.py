@@ -40,9 +40,7 @@ class TestStrategy(BaseStrategy):
         """Extracts strings of the values a specific parameter is in, specified by an input list of operations."""
         if isinstance(node, Compare):
             for op, comparator in node.ops:
-                #logger.info("Op, comparator and node.ops: %s;; %s;; %s;;", op, comparator, node.left)
-                # checks whether 'in' is in the operation 
-                # ATTENTION!!! Not sure if this checks 'in' in operators or the whole statement, might throw errors with parameter named 'in'
+                # checks whether the node includes operations from the operations parameter
                 if op in operations:
                     left = node.left
                     right = comparator
@@ -52,6 +50,8 @@ class TestStrategy(BaseStrategy):
                         if isinstance(right, Const):
                             values = TestStrategy._extract_literal_repr(right)
                             for val in values:
+                                # sorts found strings into results using the structure: 
+                                # [[param1, string],[param3, string2], ...]
                                 for result in results:
                                     if result[0] == left.name:
                                         result[1] += val
@@ -64,6 +64,8 @@ class TestStrategy(BaseStrategy):
                         if isinstance(left, Const):
                             values = TestStrategy._extract_literal_repr(left)
                             for val in values:
+                                # sorts found strings into results using the structure: 
+                                # [[param1, string],[param3, string2], ...]
                                 for result in results:
                                     if result[0] == right.name:
                                         result[1] += val
@@ -73,64 +75,59 @@ class TestStrategy(BaseStrategy):
 
     @staticmethod
     def visit(node: NodeNG, param_names: list[str], tests: list[list[str]], operations:tuple[str]):
-        """Traverses node tree and extracts all related strings based on specified operations for a specific parameter."""
+        """Traverses node tree searching for specified operations for specific parameters and accumulates the results into testcases."""
+        
         results=[]
         number_input_parameters = len(param_names)
         testcase = [""]*number_input_parameters
-        caseflag = False
 
-        # recursively call function for each child node
-
+        # checks for simple comparison
         TestStrategy.find_parameters(node, param_names, results, operations)
 
+        #checks for and comparisons and accumulates results over them
         if isinstance(node,BoolOp) and node.op == "and":
             logger.warning("And irregularly passed!!!")
             for condition in node.values:
                 TestStrategy.find_parameters(condition, param_names, results, operations)
-        
+
+        # checks for results and builds corresponding testcases
         if results != []:
             for result in results:
                 idx = param_names.index(result[0])
                 testcase[idx] = result[1]
-                caseflag = True
-        if caseflag:
             tests.append(testcase)
-            logger.info("visit: %s", tests)
+            logger.debug("Found visit test: %s", tests)
 
         
         # recursively call function for each child node
         for child in node.get_children():
             TestStrategy.visit(child, param_names, tests, operations)
 
-        # recursively call function for each child node
-        #return tests
-
 
     def _extract_in_comparisons(self, ast_tree: FunctionDef | AsyncFunctionDef) -> list[list[str]]:
-        """Finds all 'in' comparisons where a parameter is on one side, returning the opposite side."""
+        """Finds all 'in' comparisons where a parameter is on one side, returning testcases for the opposite side."""
         tests = []
         input_parameters = self.get_parameter_names()
+
         TestStrategy.visit(ast_tree, input_parameters, tests, ("in"))
-        logger.info("Extraction: %s", tests)
         return tests
 
 
     def _generate_test_cases(self) -> list[list]:
-        """Generates a final set of seeding start cases for the algorithm."""
+        """Checks final tests and returns them"""
         tests = []
-        input_parameters = self.get_parameter_names()
         number_input_parameters = len(self.get_parameter_names())
         ast_tree = self.function_info.ast_tree
 
-        # extracts all found 'in' comparisons and parses them into one list
-        
+        # extracts all found 'in' comparisons
         tests = self._extract_in_comparisons(ast_tree)
-        logger.info("Final Tests: %s", tests)
+        logger.debug("Final Tests: %s", tests)
 
-        # returns seedings with all parameters set to the 'in' parameters at once
+        # returns seedings with found testcases
         if tests != []:
             return tests
-        # when no 'in' parameters are found a generic test case is returned
+        
+        # when no testcases were generated a generic test case is returned
         else: 
             return [
             ["admin"] * number_input_parameters,

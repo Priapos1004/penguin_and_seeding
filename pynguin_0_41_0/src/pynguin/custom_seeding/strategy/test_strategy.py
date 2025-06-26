@@ -52,11 +52,14 @@ class TestStrategy(BaseStrategy):
                             for val in values:
                                 # sorts found strings into results using the structure: 
                                 # [[param1, string],[param3, string2], ...]
+                                found = False
                                 for result in results:
                                     if result[0] == left.name:
-                                        result[1] += val
+                                        result.append(val)
+                                        found = True
                                         break
-                                results.append([left.name, val])
+                                if found == False:
+                                    results.append([left.name, val])
                             
 
                     # Testcase: something is in param
@@ -66,37 +69,44 @@ class TestStrategy(BaseStrategy):
                             for val in values:
                                 # sorts found strings into results using the structure: 
                                 # [[param1, string],[param3, string2], ...]
+                                found = False
                                 for result in results:
                                     if result[0] == right.name:
-                                        result[1] += val
+                                        result.append(val)
+                                        found = True
                                         break
-                                results.append([right.name, val])
+                                if found == False:
+                                    results.append([right.name, val])
                             
 
     @staticmethod
-    def visit(node: NodeNG, param_names: list[str], tests: list[list[str]], operations:tuple[str]):
+    def visit(node: NodeNG, param_names: list[str], tests: list[list[str]], operations: tuple[str]):
         """Traverses node tree searching for specified operations for specific parameters and accumulates the results into testcases."""
         
         results=[]
         number_input_parameters = len(param_names)
-        testcase = [""]*number_input_parameters
+        testcase = [None]*number_input_parameters
+        results_found = False
 
         # checks for simple comparison
         TestStrategy.find_parameters(node, param_names, results, operations)
 
         #checks for and comparisons and accumulates results over them
         if isinstance(node,BoolOp) and node.op == "and":
-            logger.warning("And irregularly passed!!!")
             for condition in node.values:
                 TestStrategy.find_parameters(condition, param_names, results, operations)
+
 
         # checks for results and builds corresponding testcases
         if results != []:
             for result in results:
                 idx = param_names.index(result[0])
-                testcase[idx] = result[1]
-            tests.append(testcase)
-            logger.debug("Found visit test: %s", tests)
+                testcase[idx] = "".join(result[1:])
+                results_found = True
+            if results_found == True:
+                logger.info("%s",results)
+                tests.append(testcase)
+                logger.debug("Found visit test: %s", tests)
 
         
         # recursively call function for each child node
@@ -121,7 +131,7 @@ class TestStrategy(BaseStrategy):
 
         # extracts all found 'in' comparisons
         tests = self._extract_in_comparisons(ast_tree)
-        logger.debug("Final Tests: %s", tests)
+        logger.info("Final Tests: %s", tests)
 
         # returns seedings with found testcases
         if tests != []:

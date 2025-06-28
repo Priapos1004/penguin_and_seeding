@@ -21,7 +21,14 @@ class TestStrategy(BaseStrategy):
     def is_leaf_node(node: NodeNG) -> bool:
         """Checks whether a given node is a leaf node i.e. it has no child nodes."""
         return not any(node.get_children())
-    
+
+    @staticmethod
+    def call_list_visit(children: list[NodeNG], param_names: list[str], tests: list[list[str]],
+                        operations: tuple[str], results: list[list[str]] | None = None) -> None:
+        """Calls visit for list of nodes child nodes."""
+        for child in children:
+            TestStrategy.visit(child, param_names, tests, operations, results)
+
     @staticmethod
     def _extract_literal_repr(node: NodeNG) -> list[str]:
         """Extracts a readable representation of a node as either a list of strings."""
@@ -30,7 +37,8 @@ class TestStrategy(BaseStrategy):
             return [node.value]
         if isinstance(node, (List, Tuple)):
             # when a list of strings is checked, they are returned here
-            return [elt.value for elt in node.elts if isinstance(elt, Const) and isinstance(elt.value, str)]
+            return [elt.value for elt in node.elts if isinstance(elt, Const)
+                    and isinstance(elt.value, str)]
         if isinstance(node, Name):
             # when a variable is checked, it is returned here
             # Currently untested how this interacts or what is returned
@@ -41,8 +49,24 @@ class TestStrategy(BaseStrategy):
         return None
 
     @staticmethod
-    def find_parameters(node: NodeNG, param_names: list[str], results: list[list[str]], operations: tuple[str]) -> None:
-        """Extracts strings of the values a specific parameter is in, specified by an input list of operations."""
+    def append_results(param_name: str, values: list[str], results: list[list[str]]) -> None:
+        """Appends found values of a given parameter to the results list."""
+        for val in values:
+            # sorts found strings into results
+            found = False
+            for result in results:
+                if result[0] == param_name:
+                    result.append(val)
+                    logger.debug("Result, val: %s, %s", result, val)
+                    found = True
+                    break
+            if not found:
+                results.append([param_name, val])
+
+    @staticmethod
+    def find_parameters(node: NodeNG, param_names: list[str],
+                         results: list[list[str]], operations: tuple[str]) -> None:
+        """Extracts string values a specific parameters are checked against."""
         if isinstance(node, Compare):
             logger.debug("New Parameter: %s", results)
             for op, comparator in node.ops:
@@ -52,53 +76,32 @@ class TestStrategy(BaseStrategy):
                     right = comparator
 
                     # Testcase: param is in something
-                    if isinstance(left, Name) and left.name in param_names:
-                        if isinstance(right, Const):
-                            values = TestStrategy._extract_literal_repr(right)
-                            for val in values:
-                                # sorts found strings into results using the structure:
-                                # [[param1, string],[param3, string2], ...]
-                                found = False
-                                for result in results:
-                                    if result[0] == left.name:
-                                        result.append(val)
-                                        logger.debug("Result, val: %s, %s", result, val)
-                                        found = True
-                                        break
-                                if not found:
-                                    results.append([left.name, val])
+                    if (
+                        isinstance(left, Name)
+                        and left.name in param_names
+                        and isinstance(right, Const)
+                       ):
+                        values = TestStrategy._extract_literal_repr(right)
+                        TestStrategy.append_results(left.name, values, results)
 
                     # Testcase: something is in param
-                    elif isinstance(right, Name) and right.name in param_names:
-                        if isinstance(left, Const):
-                            values = TestStrategy._extract_literal_repr(left)
-                            for val in values:
-                                # sorts found strings into results using the structure:
-                                # [[param1, string],[param3, string2], ...]
-                                found = False
-                                for result in results:
-                                    if result[0] == right.name:
-                                        result.append(val)
-                                        logger.debug("Result, val: %s, %s", result, val)
-                                        found = True
-                                        break
-                                if not found:
-                                    results.append([right.name, val])
+                    elif (
+                        isinstance(right, Name)
+                        and right.name in param_names
+                        and isinstance(left, Const)
+                        ):
+                        values = TestStrategy._extract_literal_repr(left)
+                        TestStrategy.append_results(right.name, values, results)
 
     @staticmethod
-    def visit(node: NodeNG, param_names: list[str], tests: list[list[str]], operations: tuple[str], results: list[list[str]] = None, testcase:list[str] = None):
-        """Traverses node tree searching for specified operations for specific parameters and accumulates the results into testcases."""
+    def visit(node: NodeNG, param_names: list[str], tests: list[list[str]], operations: tuple[str],
+              results: list[list[str]] | None = None):
+        """Recursively traverses node tree looking for specific operations, producing testcases."""
         logger.debug("Results start: %s", results)
-        if results == None:
-            results = []
-        else:
-            results = [result.copy() for result in results]
+        results = [] if results is None else [result.copy() for result in results]
 
         number_input_parameters = len(param_names)
-        if testcase == None:
-            testcase = [""] * number_input_parameters
-        else:
-            testcase = testcase.copy()
+        testcase = [""] * number_input_parameters
 
         # checks for simple comparison
         TestStrategy.find_parameters(node, param_names, results, operations)
@@ -110,21 +113,19 @@ class TestStrategy(BaseStrategy):
             if isinstance(node.test, BoolOp) and node.test.op == "and":
                 for condition in node.test.values:
                     TestStrategy.find_parameters(condition, param_names, results, operations)
-            
+
             if isinstance(node.test, BoolOp) and node.test.op == "or":
                 current_results = results.copy()
                 for condition in node.test.values:
                     TestStrategy.find_parameters(condition, param_names, results, operations)
-                    for child in node.body:
-                        TestStrategy.visit(child, param_names, tests, operations, results, testcase)
+                    TestStrategy.call_list_visit(node.body, param_names, tests, operations, results)
                     results = current_results
-            else:    
-                for child in node.body:
-                    TestStrategy.visit(child, param_names, tests, operations, results, testcase)
-            
+            else:
+                TestStrategy.call_list_visit(node.body, param_names, tests, operations, results)
+
         else:
-            for child in node.get_children():
-                TestStrategy.visit(child, param_names, tests, operations, results, testcase)
+            TestStrategy.call_list_visit(node.get_children(), param_names, tests, operations,
+                                         results)
 
         logger.debug("Results check: %s", results)
         if TestStrategy.is_leaf_node(node) and results:
@@ -138,7 +139,7 @@ class TestStrategy(BaseStrategy):
             logger.debug("Found visit test: %s", tests)
 
     def _extract_in_comparisons(self, ast_tree: FunctionDef | AsyncFunctionDef) -> list[list[str]]:
-        """Finds all 'in' comparisons where a parameter is on one side, returning testcases for the opposite side."""
+        """Finds 'in' statements of input parameters, returning testcases with matching values."""
         tests = []
         input_parameters = self.get_parameter_names()
         for statement in ast_tree.body:
@@ -146,9 +147,8 @@ class TestStrategy(BaseStrategy):
         return tests
 
     def _generate_test_cases(self) -> list[list]:
-        """Checks final tests and returns them"""
+        """Checks final tests and returns them."""
         tests = []
-        number_input_parameters = len(self.get_parameter_names())
         ast_tree = self.function_info.ast_tree
 
         # extracts all found 'in' comparisons

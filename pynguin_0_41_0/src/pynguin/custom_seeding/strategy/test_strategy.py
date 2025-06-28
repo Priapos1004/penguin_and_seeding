@@ -156,10 +156,4 @@ class TestStrategy(BaseStrategy):
         logger.info("Final Tests: %s", tests)
 
         # returns seedings with found testcases
-        if tests != None:
-            return tests
-
-        # when no testcases were generated a generic test case is returned
-        return [
-        ["admin"] * number_input_parameters,
-        ]
+        return tests

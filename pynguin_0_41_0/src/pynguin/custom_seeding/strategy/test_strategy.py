@@ -19,6 +19,7 @@ class TestStrategy(BaseStrategy):
 
     @staticmethod
     def is_leaf_node(node: NodeNG) -> bool:
+        """Checks whether a given node is a leaf node i.e. it has no child nodes."""
         return not any(node.get_children())
     
     @staticmethod
@@ -99,7 +100,6 @@ class TestStrategy(BaseStrategy):
         else:
             testcase = testcase.copy()
 
-        found_and = False
         # checks for simple comparison
         TestStrategy.find_parameters(node, param_names, results, operations)
 
@@ -108,7 +108,6 @@ class TestStrategy(BaseStrategy):
             TestStrategy.find_parameters(node.test, param_names, results, operations)
             # checks for and comparisons and accumulates results over them
             if isinstance(node.test, BoolOp) and node.test.op == "and":
-                found_and = True
                 for condition in node.test.values:
                     TestStrategy.find_parameters(condition, param_names, results, operations)
             
@@ -128,7 +127,7 @@ class TestStrategy(BaseStrategy):
                 TestStrategy.visit(child, param_names, tests, operations, results, testcase)
 
         logger.debug("Results check: %s", results)
-        if (TestStrategy.is_leaf_node(node) and results) or found_and:
+        if TestStrategy.is_leaf_node(node) and results:
             logger.debug("%s", node.lineno)
             for result in results:
                 logger.debug("Results: %s", results)

@@ -100,11 +100,10 @@ class TestStrategy(BaseStrategy):
             testcase = testcase.copy()
 
         found_and = False
-
-
         # checks for simple comparison
         TestStrategy.find_parameters(node, param_names, results, operations)
 
+        # recursively call function for each child node
         if isinstance(node, If):
             TestStrategy.find_parameters(node.test, param_names, results, operations)
             # checks for and comparisons and accumulates results over them
@@ -112,9 +111,22 @@ class TestStrategy(BaseStrategy):
                 found_and = True
                 for condition in node.test.values:
                     TestStrategy.find_parameters(condition, param_names, results, operations)
+            
+            if isinstance(node.test, BoolOp) and node.test.op == "or":
+                current_results = results.copy()
+                for condition in node.test.values:
+                    TestStrategy.find_parameters(condition, param_names, results, operations)
+                    for child in node.body:
+                        TestStrategy.visit(child, param_names, tests, operations, results, testcase)
+                    results = current_results
+            else:    
+                for child in node.body:
+                    TestStrategy.visit(child, param_names, tests, operations, results, testcase)
+            
+        else:
+            for child in node.get_children():
+                TestStrategy.visit(child, param_names, tests, operations, results, testcase)
 
-
-        # checks for results and builds corresponding testcases
         logger.debug("Results check: %s", results)
         if (TestStrategy.is_leaf_node(node) and results) or found_and:
             logger.debug("%s", node.lineno)
@@ -126,22 +138,12 @@ class TestStrategy(BaseStrategy):
             tests.append(testcase)
             logger.debug("Found visit test: %s", tests)
 
-        # recursively call function for each child node
-        if isinstance(node, If):
-            for child in node.body:
-                TestStrategy.visit(child, param_names, tests, operations, results, testcase)
-        else:
-            for child in node.get_children():
-                TestStrategy.visit(child, param_names, tests, operations, results, testcase)
-
-
-
     def _extract_in_comparisons(self, ast_tree: FunctionDef | AsyncFunctionDef) -> list[list[str]]:
         """Finds all 'in' comparisons where a parameter is on one side, returning testcases for the opposite side."""
         tests = []
         input_parameters = self.get_parameter_names()
         for statement in ast_tree.body:
-            TestStrategy.visit(statement, input_parameters, tests, ("in"))
+            TestStrategy.visit(statement, input_parameters, tests, ("in", "not in"))
         return tests
 
     def _generate_test_cases(self) -> list[list]:

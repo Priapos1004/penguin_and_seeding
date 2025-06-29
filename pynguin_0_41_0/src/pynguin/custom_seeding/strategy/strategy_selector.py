@@ -20,6 +20,6 @@ def strategy_selector(strategy_name: str, function_info: MainSeederFunctionOutpu
     """
     if strategy_name == "simple":
         return SimpleStrategy(function_info=function_info)
-    elif strategy_name == "test":
+    if strategy_name == "test":
         return TestStrategy(function_info=function_info)
     raise ValueError(f"Strategy '{strategy_name}' not found.")

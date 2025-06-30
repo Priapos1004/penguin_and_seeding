@@ -3,7 +3,9 @@ import logging
 from pynguin.custom_seeding.schema.main_seeder_schema import MainSeederFunctionOutput
 from pynguin.custom_seeding.strategy.base_strategy import BaseStrategy
 from astroid import (
-    FunctionDef, AsyncFunctionDef, Compare, Name, Const, List, Tuple, NodeNG, BoolOp, If, Call, Attribute
+    FunctionDef, AsyncFunctionDef, Compare,
+    Name, Const, List, Tuple, NodeNG, BoolOp,
+    If, Call, Attribute
 )
 
 
@@ -129,7 +131,6 @@ class TestStrategy(BaseStrategy):
         if isinstance(node, If):
             TestStrategy.find_parameters(node.test, param_names, results, operations)
 
-
             # checks for 'and' comparisons and accumulates results over them
             if isinstance(node.test, BoolOp) and node.test.op == "and":
                 for condition in node.test.values:
@@ -149,7 +150,7 @@ class TestStrategy(BaseStrategy):
                 # checks for "startswith" statements
                 expression = node.test.func.expr
                 expr_name = ""
-                
+
                 if isinstance(expression, Name):
                     expr_name = expression.name
 
@@ -198,16 +199,14 @@ class TestStrategy(BaseStrategy):
         for statement in ast_tree.body:
             TestStrategy.visit(statement, input_parameters, tests, ("in", "not in"))
         return tests
-    
+
     def _extract_startswith_endswith(self) -> list[list[list]]:
-        """Finds startswith and endswith statements of input parameters. """
+        """Finds startswith and endswith statements of input parameters."""
         tests = []
         input_parameters = self.get_parameter_names()
         for statement in self.function_info.ast_tree.body:
             TestStrategy.visit(statement, input_parameters, tests, ("startswith", "endswith"))
         return tests
-
-
 
     def _generate_test_cases(self) -> list[list]:
         """Calls all methods creating different testcases and accumulates them."""

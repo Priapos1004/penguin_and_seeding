@@ -46,7 +46,7 @@ class TestStrategy(BaseStrategy):
         # logger warning when no parseable statement is found
         # should the program stop here or return nothing?
         logger.warning("%s could not be parsed.", str(node))
-        return None
+        return []
 
     @staticmethod
     def append_results(param_name: str, values: list[str], results: list[list[str]]):

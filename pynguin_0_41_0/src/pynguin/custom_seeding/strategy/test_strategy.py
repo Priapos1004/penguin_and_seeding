@@ -132,13 +132,13 @@ class TestStrategy(BaseStrategy):
             # Checks for 'and' comparisons and accumulates results over them
             if isinstance(node.test, BoolOp) and node.test.op == "and":
                 for condition in node.test.values:
-                    TestStrategy.find_parameters(condition, param_names, results, operations)
+                    TestStrategy.find_parameters(condition, param_names, operations, results)
 
             # Checks for 'or' comparisons and accumulates different results over the possibilities
-            elif isinstance(node.test, BoolOp) and node.test.op == "or":
+            if isinstance(node.test, BoolOp) and node.test.op == "or":
                 current_results = copy.deepcopy(results)
                 for condition in node.test.values:
-                    TestStrategy.find_parameters(condition, param_names, results, operations)
+                    TestStrategy.find_parameters(condition, param_names, operations, results)
                     TestStrategy.call_list_visit(node.body, param_names, tests, operations, results)
                     results = current_results
             else:

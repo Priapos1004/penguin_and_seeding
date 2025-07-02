@@ -145,7 +145,7 @@ class TestStrategy(BaseStrategy):
                 TestStrategy.call_list_visit(node.body, param_names, tests, operations, results)
         # Calls children of any other node
         else:
-            TestStrategy.call_list_visit(node.get_children(), param_names, tests, operations,
+            TestStrategy.call_list_visit(list(node.get_children()), param_names, tests, operations,
                                          results)
         # Extracts testcases from results
         if TestStrategy.is_leaf_node(node) and results:

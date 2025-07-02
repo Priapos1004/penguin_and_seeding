@@ -33,18 +33,18 @@ class TestStrategy(BaseStrategy):
     def _extract_literal_repr(node: NodeNG) -> list[str]:
         """Extracts a readable representation of a node value."""
         if isinstance(node, Const) and isinstance(node.value, str):
-            # when a string is checked they are returned here
+            # When a string is checked they are returned here
             return [node.value]
         if isinstance(node, (List, Tuple)):
-            # when a list of strings is checked, they are returned here
+            # When a list of strings is checked, they are returned here
             return [elt.value for elt in node.elts if isinstance(elt, Const)
                     and isinstance(elt.value, str)]
         if isinstance(node, Name):
-            # when a variable is checked, it is returned here
+            # When a variable is checked, it is returned here
             # Currently untested how this interacts or what is returned
             return [node.name]
         # logger warning when no parseable statement is found
-        # should the program stop here or return nothing?
+        # Should the program stop here or return nothing?
         logger.warning("%s could not be parsed.", str(node))
         return []
 
@@ -83,7 +83,7 @@ class TestStrategy(BaseStrategy):
         """
         if isinstance(node, Compare):
             for op, comparator in node.ops:
-                # checks whether the node includes operations from the operations parameter
+                # Checks whether the node includes operations from the operations parameter
                 if op in operations:
                     left = node.left
                     right = comparator
@@ -122,18 +122,18 @@ class TestStrategy(BaseStrategy):
         number_input_parameters = len(param_names)
         testcase = [""] * number_input_parameters
 
-        # checks for simple comparison
+        # Checks for simple comparison
         TestStrategy.find_parameters(node, param_names, results, operations)
 
-        # checks for if node
+        # Checks for if node
         if isinstance(node, If):
             TestStrategy.find_parameters(node.test, param_names, results, operations)
-            # checks for 'and' comparisons and accumulates results over them
+            # Checks for 'and' comparisons and accumulates results over them
             if isinstance(node.test, BoolOp) and node.test.op == "and":
                 for condition in node.test.values:
                     TestStrategy.find_parameters(condition, param_names, results, operations)
 
-            # checks for 'or' comparisons and accumulates different results over the possibilities
+            # Checks for 'or' comparisons and accumulates different results over the possibilities
             if isinstance(node.test, BoolOp) and node.test.op == "or":
                 current_results = results.copy()
                 for condition in node.test.values:
@@ -142,11 +142,11 @@ class TestStrategy(BaseStrategy):
                     results = current_results
             else:
                 TestStrategy.call_list_visit(node.body, param_names, tests, operations, results)
-        # calls children of any other node
+        # Calls children of any other node
         else:
             TestStrategy.call_list_visit(node.get_children(), param_names, tests, operations,
                                          results)
-        # extracts testcases from results
+        # Extracts testcases from results
         if TestStrategy.is_leaf_node(node) and results:
             logger.debug("%s", node.lineno)
             for result in results:
@@ -177,9 +177,9 @@ class TestStrategy(BaseStrategy):
         tests = []
         ast_tree = self.function_info.ast_tree
 
-        # extracts all found comparisons and gives a logger information about the final test seeding
+        # Extracts all found comparisons and gives a logger information about the final test seeding
         tests = self._extract_in_comparisons(ast_tree)
         logger.info("Final Tests: %s", tests)
 
-        # returns seedings with found testcases
+        # Returns seedings with found testcases
         return tests

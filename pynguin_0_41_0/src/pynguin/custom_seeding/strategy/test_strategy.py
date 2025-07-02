@@ -24,7 +24,7 @@ class TestStrategy(BaseStrategy):
 
     @staticmethod
     def call_list_visit(children: list[NodeNG], param_names: list[str], tests: list[list[str]],
-                        operations: tuple[str], results: list[list[str]] | None = None) -> None:
+                        operations: tuple[str], results: list[list[str]] | None = None):
         """Calls visit for list of nodes child nodes."""
         for child in children:
             TestStrategy.visit(child, param_names, tests, operations, results)
@@ -49,7 +49,7 @@ class TestStrategy(BaseStrategy):
         return None
 
     @staticmethod
-    def append_results(param_name: str, values: list[str], results: list[list[str]]) -> None:
+    def append_results(param_name: str, values: list[str], results: list[list[str]]):
         """Appends found values of a given parameter to the results list.
 
         For a parameter name given in param_name the corresponding values are sorted into
@@ -69,7 +69,7 @@ class TestStrategy(BaseStrategy):
 
     @staticmethod
     def find_parameters(node: NodeNG, param_names: list[str],
-                         results: list[list[str]], operations: tuple[str]) -> None:
+                         results: list[list[str]], operations: tuple[str]):
         """Extracts string values, specific parameters are checked against.
 
         A given node is checked, whether it includes a compare operation.

@@ -89,7 +89,7 @@ class TestStrategy(BaseStrategy):
                     left = node.left
                     right = comparator
 
-                    # Testcase: param in something
+                    # Testcase for parameter in something
                     if (
                         isinstance(left, Name)
                         and left.name in param_names
@@ -98,7 +98,7 @@ class TestStrategy(BaseStrategy):
                         values = TestStrategy._extract_literal_repr(right)
                         TestStrategy.append_results(left.name, values, results)
 
-                    # Testcase: something in param
+                    # Testcase for something in parameter
                     elif (
                         isinstance(right, Name)
                         and right.name in param_names

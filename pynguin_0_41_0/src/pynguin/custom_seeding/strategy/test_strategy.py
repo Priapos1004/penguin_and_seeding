@@ -1,5 +1,6 @@
 """A first seeding strategy to grow familiar with possible seeding functions."""
 import logging
+import copy
 from pynguin.custom_seeding.schema.main_seeder_schema import MainSeederFunctionOutput
 from pynguin.custom_seeding.strategy.base_strategy import BaseStrategy
 from astroid import (
@@ -117,7 +118,7 @@ class TestStrategy(BaseStrategy):
         ATTENTION!!! While and for loops create no wrong tests,
         but multiples of the same testcase.
         """
-        results = [] if results is None else [result.copy() for result in results]
+        results = [] if results is None else [copy.deepcopy(result) for result in results]
 
         number_input_parameters = len(param_names)
         testcase = [""] * number_input_parameters
@@ -135,7 +136,7 @@ class TestStrategy(BaseStrategy):
 
             # Checks for 'or' comparisons and accumulates different results over the possibilities
             if isinstance(node.test, BoolOp) and node.test.op == "or":
-                current_results = results.copy()
+                current_results = copy.deepcopy(results)
                 for condition in node.test.values:
                     TestStrategy.find_parameters(condition, param_names, results, operations)
                     TestStrategy.call_list_visit(node.body, param_names, tests, operations, results)

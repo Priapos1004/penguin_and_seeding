@@ -69,8 +69,8 @@ class TestStrategy(BaseStrategy):
                 results.append([param_name, val])
 
     @staticmethod
-    def find_parameters(node: NodeNG, param_names: list[str],
-                         results: list[list[str]], operations: tuple[str]):
+    def find_parameters(node: NodeNG, param_names: list[str], operations: tuple[str],
+                         results: list[list[str]]):
         """Extracts string values, specific parameters are checked against.
 
         A given node is checked, whether it includes a compare operation.
@@ -124,18 +124,18 @@ class TestStrategy(BaseStrategy):
         testcase = [""] * number_input_parameters
 
         # Checks for simple comparison
-        TestStrategy.find_parameters(node, param_names, results, operations)
+        TestStrategy.find_parameters(node, param_names, operations, results)
 
         # Checks for if node
         if isinstance(node, If):
-            TestStrategy.find_parameters(node.test, param_names, results, operations)
+            TestStrategy.find_parameters(node.test, param_names, operations, results)
             # Checks for 'and' comparisons and accumulates results over them
             if isinstance(node.test, BoolOp) and node.test.op == "and":
                 for condition in node.test.values:
                     TestStrategy.find_parameters(condition, param_names, results, operations)
 
             # Checks for 'or' comparisons and accumulates different results over the possibilities
-            if isinstance(node.test, BoolOp) and node.test.op == "or":
+            elif isinstance(node.test, BoolOp) and node.test.op == "or":
                 current_results = copy.deepcopy(results)
                 for condition in node.test.values:
                     TestStrategy.find_parameters(condition, param_names, results, operations)

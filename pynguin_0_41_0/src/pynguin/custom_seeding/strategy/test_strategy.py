@@ -4,7 +4,9 @@ import copy
 from pynguin.custom_seeding.schema.main_seeder_schema import MainSeederFunctionOutput
 from pynguin.custom_seeding.strategy.base_strategy import BaseStrategy
 from astroid import (
-    FunctionDef, AsyncFunctionDef, Compare, Name, Const, List, Tuple, NodeNG, BoolOp, If
+    FunctionDef, AsyncFunctionDef, Compare,
+    Name, Const, List, Tuple, NodeNG, BoolOp,
+    If
 )
 
 

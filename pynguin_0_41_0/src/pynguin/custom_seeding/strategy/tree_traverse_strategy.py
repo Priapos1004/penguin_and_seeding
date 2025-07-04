@@ -1,4 +1,4 @@
-"""A first seeding strategy to grow familiar with possible seeding functions."""
+"""A seeding strategy that is amazing."""
 import logging
 import copy
 from pynguin.custom_seeding.schema.main_seeder_schema import MainSeederFunctionOutput
@@ -13,11 +13,11 @@ from astroid import (
 logger = logging.getLogger(__name__)
 
 
-class TestStrategy(BaseStrategy):
-    """A test seeding strategy that returns a set of seeds checking 'in'-statements."""
+class TreeTraverseStrategy(BaseStrategy):
+    """A seeding strategy that returns a set of seeds checking 'in'-statements."""
 
     def __init__(self, function_info: MainSeederFunctionOutput):
-        """Initializes the test strategy with function information."""
+        """Initializes the strategy with function information."""
         super().__init__(function_info)
 
     @staticmethod
@@ -30,7 +30,7 @@ class TestStrategy(BaseStrategy):
                         operations: tuple[str], results: list[list[str]] | None = None):
         """Calls visit for list of nodes child nodes."""
         for child in children:
-            TestStrategy.visit(child, param_names, tests, operations, results)
+            TreeTraverseStrategy.visit(child, param_names, tests, operations, results)
 
     @staticmethod
     def _extract_literal_repr(node: NodeNG) -> list[str]:
@@ -97,8 +97,8 @@ class TestStrategy(BaseStrategy):
                         and left.name in param_names
                         and isinstance(right, Const)
                        ):
-                        values = TestStrategy._extract_literal_repr(right)
-                        TestStrategy.append_results(left.name, values, results)
+                        values = TreeTraverseStrategy._extract_literal_repr(right)
+                        TreeTraverseStrategy.append_results(left.name, values, results)
 
                     # Testcase for something in parameter
                     elif (
@@ -106,8 +106,8 @@ class TestStrategy(BaseStrategy):
                         and right.name in param_names
                         and isinstance(left, Const)
                         ):
-                        values = TestStrategy._extract_literal_repr(left)
-                        TestStrategy.append_results(right.name, values, results)
+                        values = TreeTraverseStrategy._extract_literal_repr(left)
+                        TreeTraverseStrategy.append_results(right.name, values, results)
 
     @staticmethod
     def visit(node: NodeNG, param_names: list[str], tests: list[list[str]], operations: tuple[str],
@@ -126,31 +126,31 @@ class TestStrategy(BaseStrategy):
         testcase = [""] * number_input_parameters
 
         # Checks for simple comparison
-        TestStrategy.find_parameters(node, param_names, operations, results)
+        TreeTraverseStrategy.find_parameters(node, param_names, operations, results)
 
         # Checks for if node
         if isinstance(node, If):
-            TestStrategy.find_parameters(node.test, param_names, operations, results)
+            TreeTraverseStrategy.find_parameters(node.test, param_names, operations, results)
             # Checks for 'and' comparisons and accumulates results over them
             if isinstance(node.test, BoolOp) and node.test.op == "and":
                 for condition in node.test.values:
-                    TestStrategy.find_parameters(condition, param_names, operations, results)
+                    TreeTraverseStrategy.find_parameters(condition, param_names, operations, results)
 
             # Checks for 'or' comparisons and accumulates different results over the possibilities
             if isinstance(node.test, BoolOp) and node.test.op == "or":
                 current_results = copy.deepcopy(results)
                 for condition in node.test.values:
-                    TestStrategy.find_parameters(condition, param_names, operations, results)
-                    TestStrategy.call_list_visit(node.body, param_names, tests, operations, results)
+                    TreeTraverseStrategy.find_parameters(condition, param_names, operations, results)
+                    TreeTraverseStrategy.call_list_visit(node.body, param_names, tests, operations, results)
                     results = current_results
             else:
-                TestStrategy.call_list_visit(node.body, param_names, tests, operations, results)
+                TreeTraverseStrategy.call_list_visit(node.body, param_names, tests, operations, results)
         # Calls children of any other node
         else:
-            TestStrategy.call_list_visit(list(node.get_children()), param_names, tests, operations,
+            TreeTraverseStrategy.call_list_visit(list(node.get_children()), param_names, tests, operations,
                                          results)
         # Extracts testcases from results
-        if TestStrategy.is_leaf_node(node) and results:
+        if TreeTraverseStrategy.is_leaf_node(node) and results:
             logger.debug("%s", node.lineno)
             for result in results:
                 logger.debug("Parsed results in visit: %s", results)
@@ -172,7 +172,7 @@ class TestStrategy(BaseStrategy):
         tests = []
         input_parameters = self.get_parameter_names()
         for statement in ast_tree.body:
-            TestStrategy.visit(statement, input_parameters, tests, ("in", "not in"))
+            TreeTraverseStrategy.visit(statement, input_parameters, tests, ("in", "not in"))
         return tests
 
     def _generate_test_cases(self) -> list[list]:

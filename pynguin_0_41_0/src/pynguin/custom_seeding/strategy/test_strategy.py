@@ -3,9 +3,18 @@ import logging
 from pynguin.custom_seeding.schema.main_seeder_schema import MainSeederFunctionOutput
 from pynguin.custom_seeding.strategy.base_strategy import BaseStrategy
 from astroid import (
-    FunctionDef, AsyncFunctionDef, Compare,
-    Name, Const, List, Tuple, NodeNG, BoolOp,
-    If, Call, Attribute
+    FunctionDef,
+    AsyncFunctionDef,
+    Compare,
+    Name,
+    Const,
+    List,
+    Tuple,
+    NodeNG,
+    BoolOp,
+    If,
+    Call,
+    Attribute,
 )
 
 
@@ -25,8 +34,13 @@ class TestStrategy(BaseStrategy):
         return not any(node.get_children())
 
     @staticmethod
-    def call_list_visit(children: list[NodeNG], param_names: list[str], tests: list[list[str]],
-                        operations: tuple[str], results: list[list[str]] | None = None) -> None:
+    def call_list_visit(
+        children: list[NodeNG],
+        param_names: list[str],
+        tests: list[list[str]],
+        operations: tuple[str],
+        results: list[list[str]] | None = None,
+    ) -> None:
         """Calls visit for list of nodes child nodes."""
         for child in children:
             TestStrategy.visit(child, param_names, tests, operations, results)
@@ -39,8 +53,11 @@ class TestStrategy(BaseStrategy):
             return [node.value]
         if isinstance(node, (List, Tuple)):
             # when a list of strings is checked, they are returned here
-            return [elt.value for elt in node.elts if isinstance(elt, Const)
-                    and isinstance(elt.value, str)]
+            return [
+                elt.value
+                for elt in node.elts
+                if isinstance(elt, Const) and isinstance(elt.value, str)
+            ]
         if isinstance(node, Name):
             # when a variable is checked, it is returned here
             # Currently untested how this interacts or what is returned
@@ -70,8 +87,6 @@ class TestStrategy(BaseStrategy):
                 results.append([param_name, val])
 
     @staticmethod
-    def find_parameters(node: NodeNG, param_names: list[str],
-                         results: list[list[str]], operations: tuple[str]) -> None:
         """Extracts string values, specific parameters are checked against.
 
         A given node is checked, whether it includes a compare operation.
@@ -86,16 +101,15 @@ class TestStrategy(BaseStrategy):
         if isinstance(node, Compare):
             for op, comparator in node.ops:
                 # checks whether the node includes operations from the operations parameter
+                left = node.left
+                right = comparator
                 if op in operations:
-                    left = node.left
-                    right = comparator
-
                     # Testcase: param is in something
                     if (
                         isinstance(left, Name)
                         and left.name in param_names
                         and isinstance(right, Const)
-                       ):
+                    ):
                         values = TestStrategy._extract_literal_repr(right)
                         TestStrategy.append_results(left.name, values, results)
 
@@ -104,13 +118,40 @@ class TestStrategy(BaseStrategy):
                         isinstance(right, Name)
                         and right.name in param_names
                         and isinstance(left, Const)
-                        ):
+                    ):
                         values = TestStrategy._extract_literal_repr(left)
                         TestStrategy.append_results(right.name, values, results)
+                    # Testcase: left or right node contains a len() func
+                if (
+                    op in {"==", "<", ">", ">=", "<="}  # noqa: PLR0916
+                    and isinstance(left, Call)
+                    and isinstance(left.func, Name)
+                    and left.func.name == "len"
+                    and left.args
+                    and isinstance(left.args[0], Name)
+                ):
+                    param_name_l = left.args[0].name
+                    if isinstance(right, Const):
+                        values = [
+                            "*" * int(right.value),
+                            "*" * (int(right.value) - 1),
+                            "*" * (int(right.value) + 1),
+                        ]
+                        TestStrategy.append_results(param_name_l, values, results)
+
+                    elif (
+                        isinstance(right, Call)
+                        and isinstance(right.func, Name)
+                        and right.func.name == "len"
+                        and right.args
+                        and isinstance(right.args[0], Name)
+                    ):
+                        param_name_r = left.args[0].name
+                        values = ["*" * 1]
+                        TestStrategy.append_results(param_name_l, values, results)
+                        TestStrategy.append_results(param_name_r, values, results)
 
     @staticmethod
-    def visit(node: NodeNG, param_names: list[str], tests: list[list[str]], operations: tuple[str],
-              results: list[list[str]] | None = None):
         """Recursively traverses node tree looking for specific operations, producing testcases.
 
         Checks a node for specific operations (if with 'or' or 'and').
@@ -130,7 +171,6 @@ class TestStrategy(BaseStrategy):
         # checks for if node
         if isinstance(node, If):
             TestStrategy.find_parameters(node.test, param_names, results, operations)
-
             # checks for 'and' comparisons and accumulates results over them
             if isinstance(node.test, BoolOp) and node.test.op == "and":
                 for condition in node.test.values:
@@ -144,19 +184,19 @@ class TestStrategy(BaseStrategy):
                     TestStrategy.call_list_visit(node.body, param_names, tests, operations, results)
                     results = current_results
 
-            if (isinstance(node.test, Call)
-                and isinstance(node.test.func, Attribute)
-                and node.test.func.attrname in {"startswith", "endswith"}):
-                # checks for "startswith" statements
-                expression = node.test.func.expr
-                expr_name = ""
+            if isinstance(node.test, Call) and isinstance(node.test.func, Attribute):
+                method = node.test.func.attrname
+                # checks for startswith, endswith
+                if method in {"startswith", "endswith"}:
+                    expression = node.test.func.expr
+                    expr_name = ""
 
-                if isinstance(expression, Name):
-                    expr_name = expression.name
+                    if isinstance(expression, Name):
+                        expr_name = expression.name
 
-                if node.test.args:
-                    arg = node.test.args[0]
-                    arg_val = TestStrategy._extract_literal_repr(arg)
+                    if node.test.args:
+                        arg = node.test.args[0]
+                        arg_val = TestStrategy._extract_literal_repr(arg)
 
                 TestStrategy.append_results(expr_name, arg_val, results)
                 # Create testcase immediately after collecting results
@@ -172,8 +212,6 @@ class TestStrategy(BaseStrategy):
                 TestStrategy.call_list_visit(node.body, param_names, tests, operations, results)
         # calls children of any other node
         else:
-            TestStrategy.call_list_visit(node.get_children(), param_names, tests, operations,
-                                         results)
         # extracts testcases from results
         if TestStrategy.is_leaf_node(node) and results:
             logger.debug("%s", node.lineno)
@@ -200,14 +238,6 @@ class TestStrategy(BaseStrategy):
             TestStrategy.visit(statement, input_parameters, tests, ("in", "not in"))
         return tests
 
-    def _extract_startswith_endswith(self) -> list[list[list]]:
-        """Finds startswith and endswith statements of input parameters."""
-        tests = []
-        input_parameters = self.get_parameter_names()
-        for statement in self.function_info.ast_tree.body:
-            TestStrategy.visit(statement, input_parameters, tests, ("startswith", "endswith"))
-        return tests
-
     def _generate_test_cases(self) -> list[list]:
         """Calls all methods creating different testcases and accumulates them."""
         tests = []
@@ -216,9 +246,6 @@ class TestStrategy(BaseStrategy):
         # extracts all found testcases and gives a logger information about the final test seeding
         in_tests = self._extract_in_comparisons(ast_tree)
         tests.extend(in_tests)
-
-        starts_endswith_tests = self._extract_startswith_endswith()
-        tests.extend(starts_endswith_tests)
 
         logger.info("Final Tests: %s", tests)
 

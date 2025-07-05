@@ -11,6 +11,7 @@ class BaseStrategy:
     def __init__(self, function_info: MainSeederFunctionOutput):
         """Initializes the base strategy with function information."""
         self.function_info = function_info
+        self.input_parameters: list[str] = list(self.function_info.parameters.keys())
 
     def get_test_cases(self) -> MainSeederTestInput | None:
         """Public entry point for generating test cases.
@@ -21,7 +22,7 @@ class BaseStrategy:
         if not self.all_string_parameters():
             return None
         return MainSeederTestInput(
-            test_case_parameters=self.get_parameter_names(),
+            test_case_parameters=self.input_parameters,
             test_case_values=self._generate_test_cases()
         )
 
@@ -31,10 +32,6 @@ class BaseStrategy:
 
         If no test cases can be generated, return an empty list.
         """
-
-    def get_parameter_names(self) -> list[str]:
-        """Returns the parameter names of the function."""
-        return list(self.function_info.parameters.keys())
 
     def all_string_parameters(self) -> bool:
         """Checks if all parameters of the function are strings."""

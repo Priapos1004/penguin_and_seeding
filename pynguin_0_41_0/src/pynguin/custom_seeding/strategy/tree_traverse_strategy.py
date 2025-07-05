@@ -98,7 +98,7 @@ class TreeTraverseStrategy(BaseStrategy):
 
         If the current state is empty, it creates for each value
         a new entry with the parameter name and value.
-        If the current state is not empty, we cannot do anything.
+        If the current state is not empty, there's no action we can take.
         """
         if not current_state:
             current_state = [{param_name: value} for value in values]
@@ -111,8 +111,8 @@ class TreeTraverseStrategy(BaseStrategy):
     ) -> tuple[list[str] | str, bool, bool]:
         """Extracts values from a compare operation.
 
-        Checks if the left and right nodes are parameters and constants.
-        If they are, it extracts the values and returns them along with a boolean indicating
+        Checks if the left and right nodes are parameter and constant.
+        If they are, it extracts the value(s) and returns them along with a boolean indicating
         whether the left node is the parameter or not.
 
         Returns a tuple containing:
@@ -157,7 +157,7 @@ class TreeTraverseStrategy(BaseStrategy):
         """Handles the different cases for compare operations.
 
         Depending on the value type (str or list[str]) and whether the left node is the parameter,
-        it calls different functions to append to current_state.
+        it calls different functions for appending to current_state.
         """
         if is_single:
             if not param_left:
@@ -250,7 +250,7 @@ class TreeTraverseStrategy(BaseStrategy):
         Each entry in current_state represents a test case with parameter names as keys
         and their corresponding values.
         """
-        # Checks for if node
+        # Checks for if-node
         if isinstance(node, If):
             # Ignores elif-statements and only handles if-statements
             current_state = self.find_parameters(node.test, current_state)
@@ -310,7 +310,7 @@ class TreeTraverseStrategy(BaseStrategy):
         return json.dumps(current_state, indent=4)
 
     def _generate_test_cases(self) -> list[list[str]]:
-        """Calls all methods creating different testcases and accumulates them.
+        """Starts traversion through the AST tree and processes the output.
 
         Returns seedings with found testcases.
         """

@@ -22,7 +22,7 @@ class ExperimentSettings():
 
     # Custom seeding strategy to use, or None for no custom seeding
     # Example custom seeding strategy: 'simple'
-    CUSTOM_SEEDING_STRATEGY: str | None = "simple"
+    CUSTOM_SEEDING_STRATEGY: str | None = "tree_traverse"
     # Budget in seconds for each file
     BUDGET_PER_FILE_IN_SECONDS: int = 10
 

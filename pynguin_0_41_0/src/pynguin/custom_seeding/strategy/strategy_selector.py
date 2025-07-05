@@ -5,6 +5,7 @@ This script handles all exchange between the pynguin code and the custom seeding
 from pynguin.custom_seeding.schema.main_seeder_schema import MainSeederFunctionOutput
 from pynguin.custom_seeding.strategy.base_strategy import BaseStrategy
 from pynguin.custom_seeding.strategy.simple_strategy import SimpleStrategy
+from pynguin.custom_seeding.strategy.tree_traverse_strategy import TreeTraverseStrategy
 
 
 def strategy_selector(strategy_name: str, function_info: MainSeederFunctionOutput) -> BaseStrategy:
@@ -19,4 +20,6 @@ def strategy_selector(strategy_name: str, function_info: MainSeederFunctionOutpu
     """
     if strategy_name == "simple":
         return SimpleStrategy(function_info=function_info)
+    if strategy_name == "tree_traverse":
+        return TreeTraverseStrategy(function_info=function_info)
     raise ValueError(f"Strategy '{strategy_name}' not found.")

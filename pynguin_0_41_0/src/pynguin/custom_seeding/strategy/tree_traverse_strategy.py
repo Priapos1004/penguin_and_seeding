@@ -191,6 +191,7 @@ class TreeTraverseStrategy(BaseStrategy):
         A given node is checked for its type and operations. The current_state is
         used to accumulate the knowledge from previous nodes.
         """
+        # TODO: Handle "if not ..."-statements efficiently without repeating code
         if isinstance(node, Compare):
             for op, comparator in node.ops:
                 left = node.left

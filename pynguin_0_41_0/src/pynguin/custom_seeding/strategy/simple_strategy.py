@@ -12,7 +12,7 @@ class SimpleStrategy(BaseStrategy):
 
     def _generate_test_cases(self) -> list[list]:
         """Generates a hard-coded set of test cases for the function."""
-        number_input_parameters = len(self.get_parameter_names())
+        number_input_parameters = len(self.input_parameters)
         return [
             ["admin"] * number_input_parameters,
             ["test123"] * number_input_parameters,

@@ -2,6 +2,6 @@
 def str_with_in(param: str) -> bool:
     if param.startswith("log_file"):
         if param.endswith(".txt"):
-            if "name" in param[5:-5]:  
+            if "name" in param:  
                 return True
     return False

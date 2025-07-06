@@ -125,7 +125,7 @@ class TreeTraverseStrategy(BaseStrategy):
             self,
             left: NodeNG,
             right: NodeNG,
-    ) -> tuple[list[str] | str, bool, bool]:
+    ) -> tuple[list[str] | str, str, bool, bool]:
         """Extracts values from a compare operation.
 
         Checks if the left and right nodes are parameter and constant.
@@ -134,6 +134,7 @@ class TreeTraverseStrategy(BaseStrategy):
 
         Returns a tuple containing:
         - The value(s) as a string or list of strings.
+        - The name of the parameter.
         - A boolean indicating if the value is a single string.
         - A boolean indicating if the left node is the parameter.
         """
@@ -153,7 +154,7 @@ class TreeTraverseStrategy(BaseStrategy):
 
         # If neither left nor right is a parameter, we cannot extract values
         if not (is_parameter_in or is_in_parameter):
-            return [], False, param_left
+            return [], "", False, param_left
 
         # Switch parameter to left for value extraction
         if is_in_parameter:
@@ -161,7 +162,7 @@ class TreeTraverseStrategy(BaseStrategy):
             param_left = False
 
         value, is_single = TreeTraverseStrategy._extract_literal_repr(right)
-        return value, is_single, param_left
+        return value, left.name, is_single, param_left
 
     @staticmethod
     def _handle_compare_operation_cases(
@@ -214,7 +215,7 @@ class TreeTraverseStrategy(BaseStrategy):
                 left = node.left
                 right = comparator
 
-                value, is_single, param_left = self._get_compare_values(left, right)
+                value, param_name, is_single, param_left = self._get_compare_values(left, right)
 
                 if not value:
                     logger.debug(
@@ -226,7 +227,7 @@ class TreeTraverseStrategy(BaseStrategy):
                 # Used set instead of list, as Python optimize set membership tests
                 if op in {"not in", "in"}:
                     current_state = self._handle_compare_operation_cases(
-                        param_name=left.name,
+                        param_name=param_name,
                         value=value,
                         is_single=is_single,
                         param_left=param_left,

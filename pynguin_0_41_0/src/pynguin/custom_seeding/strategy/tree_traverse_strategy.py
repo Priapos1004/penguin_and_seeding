@@ -50,12 +50,12 @@ class TreeTraverseStrategy(BaseStrategy):
         return [], False
 
     @staticmethod
-    def append_in_str(
+    def append_str_in(
         param_name: str,
         value: str,
         current_state: list[dict[str, str]]
     ) -> list[dict[str, str]]:
-        """Case for 'param in string' statements.
+        """Case for 'string in param' statements.
 
         - If the parameter is already in the current state, it is extended.
         - If it is not, a new entry is created with the parameter name and value.
@@ -72,12 +72,12 @@ class TreeTraverseStrategy(BaseStrategy):
         return current_state
 
     @staticmethod
-    def append_str_in(
+    def append_in_str(
         param_name: str,
         value: str,
         current_state: list[dict[str, str]]
     ) -> list[dict[str, str]]:
-        """Case for 'string in param' statements.
+        """Case for 'param in string' statements.
 
         Can only shorten the string, but if we are minimal in all other cases
         with current_state, we can do nothing here (except if it is empty).
@@ -86,6 +86,10 @@ class TreeTraverseStrategy(BaseStrategy):
         """
         if not current_state:
             current_state = [{param_name: value}]
+        else:
+            for test_case in current_state:
+                if param_name not in test_case:
+                    test_case[param_name] = value
         return current_state
 
     @staticmethod
@@ -98,17 +102,30 @@ class TreeTraverseStrategy(BaseStrategy):
 
         If the current state is empty, it creates for each value
         a new entry with the parameter name and value.
-        If the current state is not empty, there's no action we can take.
+        If the current state is not empty, it checks
+        if the parameter name is already in the test case.
+        If it is not, it creates an entry for every combination of
+        the parameter name and the values.
         """
         if not current_state:
             current_state = [{param_name: value} for value in values]
+        else:
+            new_testcases: list[dict[str, str]] = []
+            for test_case in current_state:
+                if param_name not in test_case:
+                    test_case[param_name] = values[0]
+                    for value in values[1:]:
+                        new_testcase = copy.deepcopy(test_case)
+                        new_testcase[param_name] = value
+                        new_testcases.append(new_testcase)
+            current_state.extend(new_testcases)
         return current_state
 
     def _get_compare_values(
             self,
             left: NodeNG,
             right: NodeNG,
-    ) -> tuple[list[str] | str, bool, bool]:
+    ) -> tuple[list[str] | str, str, bool, bool]:
         """Extracts values from a compare operation.
 
         Checks if the left and right nodes are parameter and constant.
@@ -117,6 +134,7 @@ class TreeTraverseStrategy(BaseStrategy):
 
         Returns a tuple containing:
         - The value(s) as a string or list of strings.
+        - The name of the parameter.
         - A boolean indicating if the value is a single string.
         - A boolean indicating if the left node is the parameter.
         """
@@ -136,7 +154,7 @@ class TreeTraverseStrategy(BaseStrategy):
 
         # If neither left nor right is a parameter, we cannot extract values
         if not (is_parameter_in or is_in_parameter):
-            return [], False, param_left
+            return [], "", False, param_left
 
         # Switch parameter to left for value extraction
         if is_in_parameter:
@@ -144,7 +162,7 @@ class TreeTraverseStrategy(BaseStrategy):
             param_left = False
 
         value, is_single = TreeTraverseStrategy._extract_literal_repr(right)
-        return value, is_single, param_left
+        return value, left.name, is_single, param_left
 
     @staticmethod
     def _handle_compare_operation_cases(
@@ -160,7 +178,7 @@ class TreeTraverseStrategy(BaseStrategy):
         it calls different functions for appending to current_state.
         """
         if is_single:
-            if not param_left:
+            if param_left:
                 current_state = TreeTraverseStrategy.append_in_str(
                     param_name=param_name,
                     value=value,
@@ -197,7 +215,7 @@ class TreeTraverseStrategy(BaseStrategy):
                 left = node.left
                 right = comparator
 
-                value, is_single, param_left = self._get_compare_values(left, right)
+                value, param_name, is_single, param_left = self._get_compare_values(left, right)
 
                 if not value:
                     logger.debug(
@@ -209,7 +227,7 @@ class TreeTraverseStrategy(BaseStrategy):
                 # Used set instead of list, as Python optimize set membership tests
                 if op in {"not in", "in"}:
                     current_state = self._handle_compare_operation_cases(
-                        param_name=left.name,
+                        param_name=param_name,
                         value=value,
                         is_single=is_single,
                         param_left=param_left,

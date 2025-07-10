@@ -1,4 +1,5 @@
 """A seeding strategy that traverses the AST tree to extract test cases."""
+
 import logging
 import copy
 import json
@@ -6,8 +7,16 @@ from pynguin.custom_seeding.schema.main_seeder_schema import MainSeederFunctionO
 from pynguin.custom_seeding.strategy.base_strategy import BaseStrategy
 from pynguin.utils.typeevalpy_json_schema import AstroidFunctionDef
 from astroid import (
-    Compare, Name, Const, List, Tuple,
-    NodeNG, BoolOp, If
+    Compare,
+    Name,
+    Const,
+    List,
+    Tuple,
+    NodeNG,
+    BoolOp,
+    If,
+    Call,
+    Attribute,
 )
 
 
@@ -22,9 +31,7 @@ class TreeTraverseStrategy(BaseStrategy):
         super().__init__(function_info)
 
     def call_list_visit(
-        self,
-        children: list[NodeNG],
-        current_state: list[dict[str, str]]
+        self, children: list[NodeNG], current_state: list[dict[str, str]]
     ) -> list[dict[str, str]]:
         """Calls 'visit' for list of nodes."""
         for child in children:
@@ -44,16 +51,17 @@ class TreeTraverseStrategy(BaseStrategy):
             return node.value, True
         if isinstance(node, (List, Tuple)):
             # When a list of strings is checked, they are returned here
-            return [elt.value for elt in node.elts if isinstance(elt, Const)
-                    and isinstance(elt.value, str)], False
+            return [
+                elt.value
+                for elt in node.elts
+                if isinstance(elt, Const) and isinstance(elt.value, str)
+            ], False
         logger.warning("%s could not be parsed.", str(node))
         return [], False
 
     @staticmethod
     def append_str_in(
-        param_name: str,
-        value: str,
-        current_state: list[dict[str, str]]
+        param_name: str, value: str, current_state: list[dict[str, str]]
     ) -> list[dict[str, str]]:
         """Case for 'string in param' statements.
 
@@ -73,9 +81,7 @@ class TreeTraverseStrategy(BaseStrategy):
 
     @staticmethod
     def append_in_str(
-        param_name: str,
-        value: str,
-        current_state: list[dict[str, str]]
+        param_name: str, value: str, current_state: list[dict[str, str]]
     ) -> list[dict[str, str]]:
         """Case for 'param in string' statements.
 
@@ -94,9 +100,7 @@ class TreeTraverseStrategy(BaseStrategy):
 
     @staticmethod
     def append_in_list(
-        param_name: str,
-        values: list[str],
-        current_state: list[dict[str, str]]
+        param_name: str, values: list[str], current_state: list[dict[str, str]]
     ) -> list[dict[str, str]]:
         """Case for 'param in list' statements.
 
@@ -122,9 +126,9 @@ class TreeTraverseStrategy(BaseStrategy):
         return current_state
 
     def _get_compare_values(
-            self,
-            left: NodeNG,
-            right: NodeNG,
+        self,
+        left: NodeNG,
+        right: NodeNG,
     ) -> tuple[list[str] | str, str, bool, bool]:
         """Extracts values from a compare operation.
 
@@ -166,11 +170,11 @@ class TreeTraverseStrategy(BaseStrategy):
 
     @staticmethod
     def _handle_compare_operation_cases(
-            param_name: str,
-            value: list[str] | str,
-            is_single: bool,  # noqa: FBT001
-            param_left: bool,  # noqa: FBT001
-            current_state: list[dict[str, str]]
+        param_name: str,
+        value: list[str] | str,
+        is_single: bool,  # noqa: FBT001
+        param_left: bool,  # noqa: FBT001
+        current_state: list[dict[str, str]],
     ) -> list[dict[str, str]]:
         """Handles the different cases for compare operations.
 
@@ -180,29 +184,42 @@ class TreeTraverseStrategy(BaseStrategy):
         if is_single:
             if param_left:
                 current_state = TreeTraverseStrategy.append_in_str(
-                    param_name=param_name,
-                    value=value,
-                    current_state=current_state
+                    param_name=param_name, value=value, current_state=current_state
                 )
             else:
                 current_state = TreeTraverseStrategy.append_str_in(
-                    param_name=param_name,
-                    value=value,
-                    current_state=current_state
+                    param_name=param_name, value=value, current_state=current_state
                 )
         # Case for 'list in param' does not exist, as it is not a valid operation in Python.
         elif param_left:
             current_state = TreeTraverseStrategy.append_in_list(
-                param_name=param_name,
-                values=value,
-                current_state=current_state
+                param_name=param_name, values=value, current_state=current_state
             )
         return current_state
 
+    @staticmethod
+    def _handle_start_end_with(
+        param_name: str, affix: str, method: str, current_state: list[dict[str, str]]
+    ) -> list[dict[str, str]]:
+        if not current_state:
+            return [{param_name: affix}]
+
+        new_state: list[dict[str, str]] = []
+        for test_case in current_state:
+            if param_name not in test_case:
+                test_case[param_name] = affix
+            else:
+                val = test_case[param_name]
+                if method == "startswith":
+                    test_case[param_name] = affix + val
+                elif method == "endswith":
+                    test_case[param_name] = val + affix
+            new_state.append(test_case)
+
+        return new_state
+
     def find_parameters(
-        self,
-        node: NodeNG,
-        current_state: list[dict[str, str]]
+        self, node: NodeNG, current_state: list[dict[str, str]]
     ) -> list[dict[str, str]]:
         """Extracts parameters and values from a node.
 
@@ -211,17 +228,14 @@ class TreeTraverseStrategy(BaseStrategy):
         """
         # TODO: Handle "if not ..."-statements efficiently without repeating code
         if isinstance(node, Compare):
+            left = node.left
             for op, comparator in node.ops:
-                left = node.left
                 right = comparator
 
                 value, param_name, is_single, param_left = self._get_compare_values(left, right)
-
+                # TODO: len-func logic
                 if not value:
-                    logger.debug(
-                        "Node %s does not include any values to extract.",
-                        node
-                    )
+                    logger.debug("Node %s does not include any values to extract.", node)
                     continue
 
                 # Used set instead of list, as Python optimize set membership tests
@@ -231,23 +245,45 @@ class TreeTraverseStrategy(BaseStrategy):
                         value=value,
                         is_single=is_single,
                         param_left=param_left,
-                        current_state=current_state
+                        current_state=current_state,
                     )
+                # for chained comparisons: shift left to previous comparator
+                left = comparator
 
         elif isinstance(node, BoolOp):  # noqa: SIM102
             if node.op == "and":
                 for condition in node.values:
                     current_state = self.find_parameters(condition, current_state)
-            # TODO: startswith, endswith logic
 
-        # TODO: len-func logic
+        # TODO: startswith, endswith logic
+        elif (
+            isinstance(node, Call)
+            and isinstance(node.func, Attribute)
+            and node.func.attrname in {"startswith", "endswith"}
+        ):
+            method = node.func.attrname
+            expression = node.func.expr
+            param_name = ""
+
+            if isinstance(expression, Name) and node.args:
+                param_name = expression.name
+                arg = node.args[0]
+                value, is_single = self._extract_literal_repr(arg)
+
+                if is_single:
+                    affix = value
+                    current_state = self._handle_start_end_with(
+                        param_name, affix, method, current_state
+                    )
+                else:
+                    for affix in value:
+                        current_state = self._handle_start_end_with(
+                            param_name, affix, method, current_state
+                        )
+
         return current_state
 
-    def visit(
-        self,
-        node: NodeNG,
-        current_state: list[dict[str, str]]
-    ) -> list[dict[str, str]]:
+    def visit(self, node: NodeNG, current_state: list[dict[str, str]]) -> list[dict[str, str]]:
         """Recursively traverses node tree looking for specific operations, producing testcases.
 
         Goes recursively through the node tree and checks for if-statements.
@@ -298,19 +334,13 @@ class TreeTraverseStrategy(BaseStrategy):
         """
         tests = []
         for statement in ast_tree.body:
-            tests.extend(self.visit(
-                node=statement,
-                current_state=[]
-            ))
+            tests.extend(self.visit(node=statement, current_state=[]))
         return tests
 
     def _format_current_state(self, current_state: list[dict[str, str]]) -> list[list[str]]:
         """Formats the current state into a list of lists for test cases."""
         return [
-            [
-                test_case.get(param_name, "")
-                for param_name in self.input_parameters
-            ]
+            [test_case.get(param_name, "") for param_name in self.input_parameters]
             for test_case in current_state
         ]
 
@@ -337,8 +367,10 @@ class TreeTraverseStrategy(BaseStrategy):
 
         if ast_tree:
             current_state = self._extract_test_information(ast_tree)
-            logger.info("Extracted test cases from AST tree: %s",
-                        TreeTraverseStrategy._format_for_log(current_state))
+            logger.info(
+                "Extracted test cases from AST tree: %s",
+                TreeTraverseStrategy._format_for_log(current_state),
+            )
             all_tests = self._process_test_cases(current_state)
         else:
             all_tests = []

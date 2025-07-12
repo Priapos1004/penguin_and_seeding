@@ -1005,9 +1005,11 @@ class TestCaseExecutor(AbstractTestCaseExecutor):
 
         def log_thread_exception(arg):
             _LOGGER.error(
-                "Exception in Thread: %s",
+                "Exception in Thread: %s, exc_type: %s, exc_value: %s, exc_traceback: %s",
                 arg.thread,
-                exc_info=(arg.exc_type, arg.exc_value, arg.exc_traceback),
+                arg.exc_type,
+                arg.exc_value,
+                arg.exc_traceback,
             )
 
         # Set our own exception hook, so timeout related errors in executing threads

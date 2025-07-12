@@ -17,18 +17,33 @@ __all__ = [
     'roman_encode',
     'roman_decode',
 ]
-
 import base64
 import random
+import re
 import unicodedata
 import zlib
 from typing import Union
 from uuid import uuid4
 
-from ._regex import *
+from ._regex import (
+    CAMEL_CASE_REPLACE_RE,
+    EMAILS_RE,
+    HTML_RE,
+    HTML_TAG_ONLY_RE,
+    MARGIN_RE,
+    NO_LETTERS_OR_NUMBERS_RE,
+    PRETTIFY_RE,
+    SPACES_RE,
+    URLS_RE,
+)
 from .errors import InvalidInputError
-from .validation import is_snake_case, is_full_string, is_camel_case, is_integer, is_string
-
+from .validation import (
+    is_camel_case,
+    is_full_string,
+    is_integer,
+    is_snake_case,
+    is_string,
+)
 
 # PRIVATE API
 

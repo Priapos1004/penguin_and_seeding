@@ -27,14 +27,30 @@ __all__ = [
     'contains_html',
     'words_count',
 ]
-
 import json
+import re
 import string
-from typing import Any, Optional, List
+from typing import Any, List, Optional
 
-from ._regex import *
+from ._regex import (
+    CAMEL_CASE_TEST_RE,
+    CREDIT_CARDS,
+    EMAIL_RE,
+    ESCAPED_AT_SIGN,
+    HTML_RE,
+    IP_V6_RE,
+    JSON_WRAPPER_RE,
+    NUMBER_RE,
+    SHALLOW_IP_V4_RE,
+    SNAKE_CASE_TEST_DASH_RE,
+    SNAKE_CASE_TEST_RE,
+    SPACES_RE,
+    URL_RE,
+    UUID_HEX_OK_RE,
+    UUID_RE,
+    WORDS_COUNT_RE,
+)
 from .errors import InvalidInputError
-
 
 # PRIVATE API
 

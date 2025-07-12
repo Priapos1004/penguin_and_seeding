@@ -7,7 +7,7 @@ from pynguin.custom_seeding.strategy.base_strategy import BaseStrategy
 from pynguin.utils.typeevalpy_json_schema import AstroidFunctionDef
 from astroid import (
     Compare, Name, Const, List, Tuple,
-    NodeNG, BoolOp, If
+    NodeNG, BoolOp, If, UnaryOp
 )
 
 
@@ -143,13 +143,13 @@ class TreeTraverseStrategy(BaseStrategy):
         is_parameter_in: bool = (
             isinstance(left, Name)
             and left.name in self.input_parameters
-            and isinstance(right, Const)
+            and isinstance(right, (Const, List, Tuple))
         )
 
         is_in_parameter: bool = (
             isinstance(right, Name)
             and right.name in self.input_parameters
-            and isinstance(left, Const)
+            and isinstance(left, (Const, List, Tuple))
         )
 
         # If neither left nor right is a parameter, we cannot extract values
@@ -273,14 +273,21 @@ class TreeTraverseStrategy(BaseStrategy):
             # Ignores elif-statements and only handles if-statements
             current_state = self.find_parameters(node.test, current_state)
 
+            # If-statements starting with a not operation need to call the operatiuons
+            if isinstance(node.test, UnaryOp):
+                current_state = self.find_parameters(node.test.operand, current_state)
+
             # Or-Logic is in 'visit' and not 'find_parameters' as it is
             # about traversing and not extraction of information
-            if isinstance(node.test, BoolOp) and node.test.op == "or":
+            elif isinstance(node.test, BoolOp) and node.test.op == "or":
                 old_state = copy.deepcopy(current_state)
-                current_state = []
+                temp_or_state = []
                 for condition in node.test.values:
+                    old_state = copy.deepcopy(current_state)
                     new_state = self.find_parameters(condition, old_state)
-                    current_state.extend(self.call_list_visit(node.body, new_state))
+                    temp_or_state.extend(self.call_list_visit(node.body, new_state))
+                current_state = []
+                current_state.extend(temp_or_state)
             else:
                 # If it is not an or-logic, we just traverse the body of the if-statement
                 current_state = self.call_list_visit(node.body, current_state)

@@ -29,6 +29,7 @@ def setup_logging(focus_on: bool):
         allowed_messages = [
             "Parsed testcases:",
             "Used search time:",
+            "Seeding took",
         ]
         class FocusFilter(Filter):
             def filter(self, record):

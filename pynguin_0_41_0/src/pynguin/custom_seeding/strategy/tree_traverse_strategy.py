@@ -198,6 +198,26 @@ class TreeTraverseStrategy(BaseStrategy):
         return current_state
 
     @staticmethod
+    def _get_len_values(node: NodeNG):
+        """Checks the type of a given node.
+
+        Returns a tuple of two boolean values indicating:
+            - whether the node has type "Call" and is a len-func, and
+            - whether the node has type "Const" and is a int
+        """
+        is_param = (
+            isinstance(node, Call)
+            and isinstance(node.func, Name)
+            and node.func.name == "len"
+            and node.args
+        )
+        if is_param:
+            return is_param, False
+
+        is_length = isinstance(node, Const) and isinstance(node.value, int)
+        return is_param, is_length
+
+    @staticmethod
     def _flip_op(op: str) -> str:
         return {
             "<": ">",
@@ -229,33 +249,20 @@ class TreeTraverseStrategy(BaseStrategy):
                             test_case[param_name] += "a" * (target_len - old_len + 1)
                         elif op == ">=" and old_len < target_len:
                             test_case[param_name] += "a" * (target_len - old_len)
-                        elif op == "<" and old_len >= target_len:
-                            test_case[param_name] = old_value[
-                                : target_len - 1 if target_len > 0 else 0
-                            ]
-                        elif op == "<=" and old_len > target_len:
-                            test_case[param_name] = old_value[:target_len]
-                    # if param not exists:
-                    elif op == ">":
-                        current_state = [{param_name: "a" * (target_len + 1)}]
-                    elif op == ">=":
-                        current_state = [{param_name: "a" * target_len}]
-                    elif op == "<":
-                        current_state = [
-                            {param_name: "a" * (target_len - 1 if target_len > 0 else 0)}
-                        ]
-                    elif op == "<=":
-                        current_state = [{param_name: "a" * target_len}]
+                    else:
+                        current_state = [{param_name: ""}]
 
         return current_state
 
     @staticmethod
     def _handle_len_compare_between_params(
-        param1: str, param2: str, op: str, current_state: list[dict[str, str]]
+        left: NodeNG, right: NodeNG, op: str, current_state: list[dict[str, str]]
     ) -> list[dict[str, str]]:
+        param_l = left.args[0].name
+        param_r = right.args[0].name
         for test_case in current_state:
-            val1 = test_case.get(param1)
-            val2 = test_case.get(param2)
+            val1 = test_case.get(param_l)
+            val2 = test_case.get(param_r)
 
             len1 = len(val1) if val1 else None
             len2 = len(val2) if val2 else None
@@ -264,32 +271,32 @@ class TreeTraverseStrategy(BaseStrategy):
             if len1 is not None and len2 is not None:
                 # adjust one to make it valid
                 if op in {"<", "<="} and len1 > len2:
-                    test_case[param2] += "a" * (len1 - len2 + 1)
+                    test_case[param_l] += "a" * (len1 - len2 + 1)
                 elif op in {">", ">="} and len1 < len2:
-                    test_case[param1] += "a" * (len2 - len1 + 1)
+                    test_case[param_r] += "a" * (len2 - len1 + 1)
 
             # if only one exists
             elif len1 is not None:
                 new_len = len1 + 1 if op in {"<", "<="} else max(1, len1 - 1)
-                test_case[param2] = "a" * new_len
+                test_case[param_r] = "a" * new_len
             elif len2 is not None:
                 new_len = len2 - 1 if op in {"<", "<="} else len2 + 1
-                test_case[param1] = "a" * max(1, new_len)
+                test_case[param_l] = "a" * max(1, new_len)
 
             # if neither exist
             elif op in {"<", "<="}:
-                test_case[param1] = "aaa"
-                test_case[param2] = "aaaaa"
+                test_case[param_l] = ""
+                test_case[param_r] = "a"
             else:
-                test_case[param1] = "aaaaa"
-                test_case[param2] = "aaa"
+                test_case[param_l] = "a"
+                test_case[param_r] = ""
 
         if not current_state:
             # create new state
             if op in {"<", "<="}:
-                current_state = [{param1: "a", param2: "aaaa"}]
+                current_state = [{param_l: "", param_r: "a"}]
             else:
-                current_state = [{param1: "aaaa", param2: "a"}]
+                current_state = [{param_l: "a", param_r: ""}]
 
         return current_state
 
@@ -314,6 +321,80 @@ class TreeTraverseStrategy(BaseStrategy):
 
         return new_state
 
+    def _handle_start_end_node(
+        self, node: Call, current_state: list[dict[str, str]]
+    ) -> list[dict[str, str]]:
+        """Handles the different cases for node contains startswith or endswith.
+
+        Depending on the value type (str or list[str]),
+        testcases will be appended to current_state.
+        """
+        method = node.func.attrname
+        expression = node.func.expr
+
+        if isinstance(expression, Name) and node.args:
+            param_name = expression.name
+            arg = node.args[0]
+            value, is_single = self._extract_literal_repr(arg)
+
+            if is_single:
+                current_state = self._handle_start_end_with(
+                    param_name, value, method, current_state
+                )
+            else:
+                for affix in value:
+                    current_state = self._handle_start_end_with(
+                        param_name, affix, method, current_state
+                    )
+        return current_state
+
+    def _handle_compare_node(
+        self, node: NodeNG, current_state: list[dict[str, str]]
+    ) -> list[dict[str, str]]:
+        """Handles different cases for Compare node.
+
+        Depending on the op it will call different methods to check for len or in, not in logic.
+        testcases will be appended to current_state.
+        """
+        left = node.left
+        for op, comparator in node.ops:
+            right = comparator
+
+            value, param_name, is_single, param_left = self._get_compare_values(left, right)
+            # len-func logic
+            if op in {"==", "!=", ">", ">=", "<="}:
+                is_left_param, is_left_length = self._get_len_values(left)
+                is_right_param, is_right_length = self._get_len_values(right)
+
+                if is_left_param and is_right_length:
+                    current_state = self._handle_len(left, right, op, current_state)
+                elif is_left_length and is_right_param:
+                    left, right = right, left
+                    flipped_op = self._flip_op(op)
+                    current_state = self._handle_len(left, right, flipped_op, current_state)
+                elif is_left_param and is_right_param:
+                    current_state = self._handle_len_compare_between_params(
+                        left, right, op, current_state
+                    )
+
+            if not value:
+                logger.debug("Node %s does not include any values to extract.", node)
+                continue
+
+            # Used set instead of list, as Python optimize set membership tests
+            if op in {"not in", "in"}:
+                current_state = self._handle_compare_operation_cases(
+                    param_name,
+                    value,
+                    is_single,
+                    param_left,
+                    current_state,
+                )
+            # for chained comparisons: shift left to previous comparator
+            left = comparator
+
+        return current_state
+
     def find_parameters(
         self, node: NodeNG, current_state: list[dict[str, str]]
     ) -> list[dict[str, str]]:
@@ -322,94 +403,18 @@ class TreeTraverseStrategy(BaseStrategy):
         A given node is checked for its type and operations. The current_state is
         used to accumulate the knowledge from previous nodes.
         """
-        # TODO: Handle "if not ..."-statements efficiently without repeating code
         if isinstance(node, Compare):
-            left = node.left
-            for op, comparator in node.ops:
-                right = comparator
+            current_state = self._handle_compare_node(node, current_state)
 
-                value, param_name, is_single, param_left = self._get_compare_values(left, right)
-                # len-func logic
-                if op in {"==", "<", ">", ">=", "<="}:
-                    if (
-                        isinstance(left, Call)
-                        and isinstance(left.func, Name)
-                        and left.func.name == "len"
-                        and left.args
-                        and isinstance(right, Const)
-                        and isinstance(right.value, int)
-                    ):
-                        current_state = self._handle_len(left, right, op, current_state)
-                    elif (
-                        isinstance(right, Call)
-                        and isinstance(right.func, Name)
-                        and right.func.name == "len"
-                        and right.args
-                        and isinstance(left, Const)
-                        and isinstance(left.value, int)
-                    ):
-                        left, right = right, left
-                        flipped_op = self._flip_op(op)
-                        current_state = self._handle_len(left, right, flipped_op, current_state)
-                    elif (
-                        isinstance(left, Call)
-                        and isinstance(left.func, Name)
-                        and left.func.name == "len"
-                        and isinstance(right, Call)
-                        and isinstance(right.func, Name)
-                        and right.func.name == "len"
-                    ):
-                        param1 = left.args[0].name
-                        param2 = right.args[0].name
-                        current_state = self._handle_len_compare_between_params(
-                            param1, param2, op, current_state
-                        )
-
-                if not value:
-                    logger.debug("Node %s does not include any values to extract.", node)
-                    continue
-
-                # Used set instead of list, as Python optimize set membership tests
-                if op in {"not in", "in"}:
-                    current_state = self._handle_compare_operation_cases(
-                        param_name=param_name,
-                        value=value,
-                        is_single=is_single,
-                        param_left=param_left,
-                        current_state=current_state,
-                    )
-                # for chained comparisons: shift left to previous comparator
-                left = comparator
-
-        elif isinstance(node, BoolOp):  # noqa: SIM102
-            if node.op == "and":
-                for condition in node.values:
-                    current_state = self.find_parameters(condition, current_state)
-        # startswith endswith logic
+        elif isinstance(node, BoolOp) and node.op == "and":
+            for condition in node.values:
+                current_state = self.find_parameters(condition, current_state)
         elif (
             isinstance(node, Call)
             and isinstance(node.func, Attribute)
             and node.func.attrname in {"startswith", "endswith"}
         ):
-            method = node.func.attrname
-            expression = node.func.expr
-            param_name = ""
-
-            if isinstance(expression, Name) and node.args:
-                param_name = expression.name
-                arg = node.args[0]
-                value, is_single = self._extract_literal_repr(arg)
-
-                if is_single:
-                    affix = value
-                    current_state = self._handle_start_end_with(
-                        param_name, affix, method, current_state
-                    )
-                else:
-                    for affix in value:
-                        current_state = self._handle_start_end_with(
-                            param_name, affix, method, current_state
-                        )
+            current_state = self._handle_start_end_with(node, current_state)
 
         return current_state
 
@@ -445,7 +450,7 @@ class TreeTraverseStrategy(BaseStrategy):
                 old_state = copy.deepcopy(current_state)
                 temp_or_state = []
                 for condition in node.test.values:
-                    new_state = self.find_parameters(condition, old_state)
+                    new_state = self.find_parameters(condition, copy.deepcopy(old_state))
                     temp_or_state.extend(self.call_list_visit(node.body, new_state))
                 current_state.extend(temp_or_state)
             else:

@@ -17,6 +17,7 @@ import logging
 
 from abc import ABC
 from abc import abstractmethod
+import time
 from typing import TYPE_CHECKING
 from typing import Generic
 from typing import TypeVar
@@ -215,10 +216,21 @@ class TestSuiteGenerationAlgorithmFactory(GenerationAlgorithmFactory[tsc.TestSui
             else:
                 # compute_seeds should return a List[TestCase]
                 # or None if no seeds were found
+                start_time = time.perf_counter()  # Start timer for seeding
                 seeds: list = compute_seeds(
                     test_cluster=self._test_cluster,
                     strategy=config.configuration.seeding.initial_population_strategy
                 )
+                seeding_time = time.perf_counter() - start_time
+                self._logger.info(
+                    "Seeding took %.2f seconds", seeding_time
+                )
+                # Adjust maximum search time for GA with seeding time
+                if config.configuration.stopping.maximum_search_time > 0:
+                    config.configuration.stopping.maximum_search_time = max(
+                        int(config.configuration.stopping.maximum_search_time - seeding_time),
+                        0
+                    )
                 if seeds:
                     population_provider.collect_testcases(seeds)
                 else:

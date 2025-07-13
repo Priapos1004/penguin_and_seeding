@@ -71,6 +71,9 @@ def compute_seeds(test_cluster: ModuleTestCluster, strategy: str) -> list[Defaul
 
         pyobj = acc.callable
         name = pyobj.__name__
+        if not hasattr(pyobj, "__module__"):
+            logger.warning("Skipping callable '%s' without module information.", name)
+            continue
         module = pyobj.__module__
         cd = test_cluster.function_data_for_accessibles[acc]
 

@@ -58,7 +58,7 @@ def run_pynguin_on_module(module_name, strategy: str | None, budget_seconds: int
     logger.info(f"▶ Running Pynguin on module: {module_name}")
     output_config = TestCaseOutputConfiguration(
         export_strategy=ExportStrategy.PY_TEST,
-        format_with_black=True,
+        format_with_black=False,
         output_path=experiment_settings.RESULTS_DIR
     )
 

@@ -217,7 +217,7 @@ def is_url(input_string: Any, allowed_schemes: Optional[List[str]] = None) -> bo
     return valid
 
 
-def is_email(input_string: Any) -> bool:
+def is_email(input_string: str) -> bool:
     """
     Check if a string is a valid email.
 
@@ -260,7 +260,7 @@ def is_email(input_string: Any) -> bool:
         return False
 
 
-def is_credit_card(input_string: Any, card_type: str = None) -> bool:
+def is_credit_card(input_string: str, card_type: str = None) -> bool:
     """
     Checks if a string is a valid credit card number.
     If card type is provided then it checks against that specific type only,
@@ -299,7 +299,7 @@ def is_credit_card(input_string: Any, card_type: str = None) -> bool:
     return False
 
 
-def is_camel_case(input_string: Any) -> bool:
+def is_camel_case(input_string: str) -> bool:
     """
     Checks if a string is formatted as camel case.
 
@@ -321,7 +321,7 @@ def is_camel_case(input_string: Any) -> bool:
     return is_full_string(input_string) and CAMEL_CASE_TEST_RE.match(input_string) is not None
 
 
-def is_snake_case(input_string: Any, separator: str = '_') -> bool:
+def is_snake_case(input_string: str, separator: str = '_') -> bool:
     """
     Checks if a string is formatted as "snake case".
 
@@ -358,7 +358,7 @@ def is_snake_case(input_string: Any, separator: str = '_') -> bool:
     return False
 
 
-def is_json(input_string: Any) -> bool:
+def is_json(input_string: str) -> bool:
     """
     Check if a string is a valid json.
 
@@ -406,7 +406,7 @@ def is_uuid(input_string: Any, allow_hex: bool = False) -> bool:
     return UUID_RE.match(s) is not None
 
 
-def is_ip_v4(input_string: Any) -> bool:
+def is_ip_v4(input_string: str) -> bool:
     """
     Checks if a string is a valid ip v4.
 
@@ -431,7 +431,7 @@ def is_ip_v4(input_string: Any) -> bool:
     return True
 
 
-def is_ip_v6(input_string: Any) -> bool:
+def is_ip_v6(input_string: str) -> bool:
     """
     Checks if a string is a valid ip v6.
 
@@ -447,7 +447,7 @@ def is_ip_v6(input_string: Any) -> bool:
     return is_full_string(input_string) and IP_V6_RE.match(input_string) is not None
 
 
-def is_ip(input_string: Any) -> bool:
+def is_ip(input_string: str) -> bool:
     """
     Checks if a string is a valid ip (either v4 or v6).
 
@@ -510,7 +510,7 @@ def is_palindrome(input_string: Any, ignore_spaces: bool = False, ignore_case: b
     return True
 
 
-def is_pangram(input_string: Any) -> bool:
+def is_pangram(input_string: str) -> bool:
     """
     Checks if the string is a pangram (https://en.wikipedia.org/wiki/Pangram).
 
@@ -529,7 +529,7 @@ def is_pangram(input_string: Any) -> bool:
     return set(SPACES_RE.sub('', input_string)).issuperset(set(string.ascii_lowercase))
 
 
-def is_isogram(input_string: Any) -> bool:
+def is_isogram(input_string: str) -> bool:
     """
     Checks if the string is an isogram (https://en.wikipedia.org/wiki/Isogram).
 
@@ -545,7 +545,7 @@ def is_isogram(input_string: Any) -> bool:
     return is_full_string(input_string) and len(set(input_string)) == len(input_string)
 
 
-def is_slug(input_string: Any, separator: str = '-') -> bool:
+def is_slug(input_string: str, separator: str = '-') -> bool:
     """
     Checks if a given string is a slug (as created by `slugify()`).
 

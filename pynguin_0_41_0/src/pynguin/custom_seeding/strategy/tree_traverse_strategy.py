@@ -507,7 +507,7 @@ class TreeTraverseStrategy(BaseStrategy):
             for affix in value:
                 current_state = self.append_start_end_with(
                     param_name=param_name,
-                    affix=affix, 
+                    affix=affix,
                     method=method,
                     current_state=current_state
                 )

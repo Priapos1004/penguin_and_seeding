@@ -75,8 +75,9 @@ class TreeTraverseStrategy(BaseStrategy):
         """
         if current_state:
             for test_case in current_state:
-                if param_name in test_case and value not in test_case[param_name]:
-                    test_case[param_name] += value
+                if param_name in test_case:
+                    if value not in test_case[param_name]:
+                        test_case[param_name] += value
                 else:
                     test_case[param_name] = value
         else:
@@ -421,7 +422,7 @@ class TreeTraverseStrategy(BaseStrategy):
 
                 if op in {"==", "!=", "<", ">", ">=", "<="}:
                     # Flip operator if params switched
-                    correct_op = self._flip_op(op) if param_left == 0 else op
+                    correct_op = self._flip_op(op) if param_left == 1 else op
 
                     if param_left != 2:
                         current_state = TreeTraverseStrategy.append_len_int(

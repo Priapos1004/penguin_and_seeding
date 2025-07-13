@@ -218,7 +218,7 @@ class TreeTraverseStrategy(BaseStrategy):
         return is_param, is_length
 
     @staticmethod
-    def _flip_op(op: str) -> str:
+    def _flip_op(op: str):
         return {
             "<": ">",
             ">": "<",
@@ -247,56 +247,65 @@ class TreeTraverseStrategy(BaseStrategy):
                     if param_name in test_case:
                         if op == ">" and old_len <= target_len:
                             test_case[param_name] += "a" * (target_len - old_len + 1)
-                        elif op == ">=" and old_len < target_len:
+                        elif op in {">=", "=="} and old_len < target_len:
                             test_case[param_name] += "a" * (target_len - old_len)
+
                     else:
                         current_state = [{param_name: ""}]
 
         return current_state
 
     @staticmethod
+    def _generate_new_string_len(op: str):
+        # Generate simple strings depending on op in a len-node
+        val1 = ""
+        val2 = ""
+
+        if op in {"<", "<=", "!="}:
+            val2 = "a"
+        elif op in {">", ">="}:
+            val1 = "a"
+
+        return val1, val2
+
     def _handle_len_compare_between_params(
-        left: NodeNG, right: NodeNG, op: str, current_state: list[dict[str, str]]
+        self, left: NodeNG, right: NodeNG, op: str, current_state: list[dict[str, str]]
     ) -> list[dict[str, str]]:
         param_l = left.args[0].name
         param_r = right.args[0].name
         for test_case in current_state:
             val1 = test_case.get(param_l)
             val2 = test_case.get(param_r)
-
             len1 = len(val1) if val1 else None
             len2 = len(val2) if val2 else None
 
             # if both lengths exist
             if len1 is not None and len2 is not None:
                 # adjust one to make it valid
-                if op in {"<", "<="} and len1 > len2:
-                    test_case[param_l] += "a" * (len1 - len2 + 1)
+                if op in {"<", "<=", "!="} and len1 >= len2:
+                    test_case[param_r] += "a" * (len1 - len2 + 1)
                 elif op in {">", ">="} and len1 < len2:
-                    test_case[param_r] += "a" * (len2 - len1 + 1)
+                    test_case[param_l] += "a" * (len2 - len1 + 1)
+                elif op == "==" and len1 > len2:
+                    test_case[param_r] += "a" * (len1 - len2)
+                elif op == "==" and len1 < len2:
+                    test_case[param_l] += "a" * (len1 - len2)
 
             # if only one exists
             elif len1 is not None:
-                new_len = len1 + 1 if op in {"<", "<="} else max(1, len1 - 1)
+                new_len = len1 + 1 if op in {"<", "<=", "!="} else max(1, len1 - 1)
                 test_case[param_r] = "a" * new_len
             elif len2 is not None:
                 new_len = len2 - 1 if op in {"<", "<="} else len2 + 1
-                test_case[param_l] = "a" * max(1, new_len)
-
-            # if neither exist
-            elif op in {"<", "<="}:
-                test_case[param_l] = ""
-                test_case[param_r] = "a"
+                test_case[param_l] = "a" * max(0, new_len)
+            # if neither exist, generate new simple strings
             else:
-                test_case[param_l] = "a"
-                test_case[param_r] = ""
+                test_case[param_l], test_case[param_r] = self._generate_new_string_len(op)
 
         if not current_state:
             # create new state
-            if op in {"<", "<="}:
-                current_state = [{param_l: "", param_r: "a"}]
-            else:
-                current_state = [{param_l: "a", param_r: ""}]
+            val1, val2 = self._generate_new_string_len(op)
+            current_state = [{param_l: val1, param_r: val2}]
 
         return current_state
 
@@ -450,8 +459,10 @@ class TreeTraverseStrategy(BaseStrategy):
                 old_state = copy.deepcopy(current_state)
                 temp_or_state = []
                 for condition in node.test.values:
-                    new_state = self.find_parameters(condition, copy.deepcopy(old_state))
+                    old_state = copy.deepcopy(current_state)
+                    new_state = self.find_parameters(condition, old_state)
                     temp_or_state.extend(self.call_list_visit(node.body, new_state))
+                current_state = []
                 current_state.extend(temp_or_state)
             else:
                 # If it is not an or-logic, we just traverse the body of the if-statement

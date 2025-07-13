@@ -25,5 +25,7 @@ class ExperimentSettings():
     CUSTOM_SEEDING_STRATEGY: str | None = "tree_traverse"
     # Budget in seconds for each file
     BUDGET_PER_FILE_IN_SECONDS: int = 10
+    # Random seed
+    RANDOM_SEED: int = 42
 
 experiment_settings = ExperimentSettings()

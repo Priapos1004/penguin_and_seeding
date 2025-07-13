@@ -68,7 +68,8 @@ def run_pynguin_on_module(module_name, strategy: str | None, budget_seconds: int
         module_name=f"{parent_module}.{module_name}",
         test_case_output=output_config
     )
-
+    
+    cfg.seeding.seed = experiment_settings.RANDOM_SEED
     cfg.stopping.maximum_search_time = budget_seconds
     if isinstance(strategy, str):
         cfg.seeding.initial_population_seeding = True

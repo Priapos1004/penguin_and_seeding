@@ -75,7 +75,7 @@ class TreeTraverseStrategy(BaseStrategy):
         """
         if current_state:
             for test_case in current_state:
-                if param_name in test_case:
+                if param_name in test_case and value not in test_case[param_name]:
                     test_case[param_name] += value
                 else:
                     test_case[param_name] = value
@@ -459,26 +459,37 @@ class TreeTraverseStrategy(BaseStrategy):
         return current_state
 
     @staticmethod
-    def _handle_start_end_with(
-        param_name: str, affix: str, method: str, current_state: list[dict[str, str]]
+    def append_start_end_with(
+        param_name: str,
+        affix: str,
+        method: str,
+        current_state: list[dict[str, str]]
     ) -> list[dict[str, str]]:
-        if not current_state:
-            return [{param_name: affix}]
+        """Case for 'param.startswith(affix)' and 'param.endswith(affix)' statements.
 
-        for test_case in current_state:
-            if param_name not in test_case:
-                test_case[param_name] = affix
-            elif method == "startswith":
-                test_case[param_name] = affix + test_case[param_name]
-            elif method == "endswith":
-                test_case[param_name] += affix
+        If the current state is empty, it creates a testcase
+        with the parameter just the value of the affix.
+        If the current state is not empty, it checks
+        the method and then appends the missing
+        part to the front / back if not already present.
+        """
+        if current_state:
+            for test_case in current_state:
+                if param_name not in test_case:
+                    test_case[param_name] = affix
+                elif method == "startswith" and not test_case[param_name].startswith(affix):
+                    test_case[param_name] = affix + test_case[param_name]
+                elif method == "endswith" and not test_case[param_name].endswith(affix):
+                    test_case[param_name] += affix
+        else:
+            current_state.append({param_name: affix})
 
         return current_state
 
     def _handle_start_end_node(
         self, node: Call, current_state: list[dict[str, str]]
     ) -> list[dict[str, str]]:
-        """Handles the different cases for node contains startswith or endswith.
+        """Handles different cases for startswith and endswith.
 
         Depending on the value type (str or list[str]),
         testcases will be appended to current_state.
@@ -488,18 +499,19 @@ class TreeTraverseStrategy(BaseStrategy):
 
         if isinstance(expression, Name) and node.args:
             param_name = expression.name
-            arg = node.args[0]
-            value, is_single = self._extract_literal_repr(arg)
+            value, is_single = self._extract_literal_repr(node.args[0])
 
             if is_single:
-                current_state = self._handle_start_end_with(
-                    param_name, value, method, current_state
+                value = [value]  # Ensure value is a list for consistency
+
+            for affix in value:
+                current_state = self.append_start_end_with(
+                    param_name=param_name,
+                    affix=affix, 
+                    method=method,
+                    current_state=current_state
                 )
-            else:
-                for affix in value:
-                    current_state = self._handle_start_end_with(
-                        param_name, affix, method, current_state
-                    )
+
         return current_state
 
     def find_parameters(

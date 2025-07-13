@@ -419,7 +419,7 @@ class TreeTraverseStrategy(BaseStrategy):
                     logger.debug("Node %s does not include any values to extract.", node)
                     continue
 
-                if op in {"==", "!=", ">", ">=", "<="}:
+                if op in {"==", "!=", "<", ">", ">=", "<="}:
                     # Flip operator if params switched
                     correct_op = self._flip_op(op) if param_left == 0 else op
 

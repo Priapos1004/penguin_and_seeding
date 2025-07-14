@@ -1,11 +1,14 @@
 """Script to run Pynguin on all Python modules in a directory, generate tests, and report coverage."""
+import json
 import logging
+import re
 import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
 
+import pandas as pd
 from config import experiment_settings
 from logging_config import setup_logging
 from pynguin.configuration import (
@@ -111,6 +114,48 @@ def generate_coverage_report(strategy: str | None, budget_seconds: int, seed: in
 
     logger.info(f"JSON coverage report saved to: {json_report_path}")
 
+def merge_coverage_reports() -> pd.DataFrame:
+    json_dir_path = Path(experiment_settings.JSON_DIR)
+    
+    # Pattern to match filenames like: coverage__strategy__budget__seed.json
+    pattern = re.compile(r"coverage__(.*?)__(\d+)__(\d+)\.json")
+    
+    records = []
+
+    for json_file in json_dir_path.glob("coverage__*__*__*.json"):
+        match = pattern.match(json_file.name)
+        if not match:
+            continue
+
+        strategy, budget_seconds, seed = match.groups()
+        budget_seconds = int(budget_seconds)
+        seed = int(seed)
+
+        try:
+            with open(json_file, 'r') as f:
+                data = json.load(f)
+
+            timestamp = data.get("meta", {}).get("timestamp")
+
+            for file_name, file_data in data.get("files", {}).items():
+                record = {
+                    "file_name": file_name,
+                    "summary_num_statements": file_data.get("summary", {}).get("num_statements"),
+                    "summary_missing_lines": file_data.get("summary", {}).get("missing_lines"),
+                    "summary_excluded_lines": file_data.get("summary", {}).get("excluded_lines"),
+                    "summary_percent_covered": file_data.get("summary", {}).get("percent_covered"),
+                    "budget_seconds": budget_seconds,
+                    "seed": seed,
+                    "strategy": strategy,
+                    "timestamp": timestamp
+                }
+                records.append(record)
+
+        except Exception as e:
+            print(f"Failed to process {json_file}: {e}")
+
+    return pd.DataFrame(records)
+
 def main(strategies: list[str | None], budget_seconds: int, seeds: list[int]):
     start_time = time.perf_counter()
     modules = find_python_modules(experiment_settings.EXAMPLES_DIR)
@@ -146,6 +191,17 @@ def main(strategies: list[str | None], budget_seconds: int, seeds: list[int]):
                 )
             print("\n\n")
     
+    logger.info("All modules processed -> Merging coverage reports.")
+    merged_reports = merge_coverage_reports()
+    logger.info("Save merged coverage reports to CSV and Excel files.")
+    merged_reports.to_csv(
+        experiment_settings.JSON_DIR + "/merged_coverage_reports.csv",
+        index=False
+    )
+    merged_reports.to_excel(
+        experiment_settings.JSON_DIR + "/merged_coverage_reports.xlsx",
+        index=False
+    )
     logger.info(
         "Pynguin benchmark completed in %.2f seconds.",
         time.perf_counter() - start_time

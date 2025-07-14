@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 import webbrowser
 from pathlib import Path
 
@@ -114,6 +115,7 @@ def open_coverage_in_browser():
     webbrowser.open(file_url)
 
 def main(strategy: str | None, budget_seconds: int):
+    start_time = time.perf_counter()
     logger.info("Starting Pynguin benchmark with strategy: '%s', budget: %d seconds", strategy, budget_seconds)
     ensure_directories()
     modules = find_python_modules(experiment_settings.EXAMPLES_DIR)
@@ -130,7 +132,10 @@ def main(strategy: str | None, budget_seconds: int):
 
     # 2. Run all tests in one coverage run
     coverage_successful = run_tests_and_coverage()
-
+    logger.info(
+        "Pynguin benchmark completed in %.2f seconds.",
+        time.perf_counter() - start_time
+    )
     # 3. Generate and display coverage report
     if coverage_successful:
         generate_coverage_report()

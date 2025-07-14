@@ -6,7 +6,9 @@ class ExperimentSettings():
     involved approaches, and other relevant settings.
     """
     # Root directory of functions under test
-    EXAMPLES_DIR: str = "scripts/examples/complex_func"
+    # "scripts/examples"
+    # "scripts/repos/string_utils"
+    EXAMPLES_DIR: str = "scripts/repos/Python_master/strings"
     # Directory where the resulting test cases will be stored
     RESULTS_DIR: str = "scripts/pynguin_results"
     # Directory for files of coverage report

@@ -223,7 +223,7 @@ class TestSuiteGenerationAlgorithmFactory(GenerationAlgorithmFactory[tsc.TestSui
                 )
                 seeding_time = time.perf_counter() - start_time
                 self._logger.info(
-                    "Seeding took %.2f seconds", seeding_time
+                    "Seeding took %.4f seconds", seeding_time
                 )
                 # Adjust maximum search time for GA with seeding time
                 if config.configuration.stopping.maximum_search_time > 0:

@@ -1,12 +1,14 @@
 """Script to run Pynguin on all Python modules in a directory, generate tests, and report coverage."""
+import json
 import logging
-import os
+import re
 import shutil
 import subprocess
 import sys
-import webbrowser
+import time
 from pathlib import Path
 
+import pandas as pd
 from config import experiment_settings
 from logging_config import setup_logging
 from pynguin.configuration import (
@@ -53,12 +55,12 @@ def find_python_modules(directory: str) -> list[tuple[str, str]]:
         modules.append((mod_name, str(path)))
     return modules
 
-def run_pynguin_on_module(module_name, strategy: str | None, budget_seconds: int):
+def run_pynguin_on_module(module_name, strategy: str | None, budget_seconds: int, seed: int):
     print()
     logger.info(f"▶ Running Pynguin on module: {module_name}")
     output_config = TestCaseOutputConfiguration(
         export_strategy=ExportStrategy.PY_TEST,
-        format_with_black=True,
+        format_with_black=False,
         output_path=experiment_settings.RESULTS_DIR
     )
 
@@ -69,6 +71,7 @@ def run_pynguin_on_module(module_name, strategy: str | None, budget_seconds: int
         test_case_output=output_config
     )
 
+    cfg.seeding.seed = seed
     cfg.stopping.maximum_search_time = budget_seconds
     if isinstance(strategy, str):
         cfg.seeding.initial_population_seeding = True
@@ -100,21 +103,61 @@ def run_tests_and_coverage() -> bool:
     else:
         return True
 
-def generate_coverage_report():
-    logger.info("Tests passed. Generating coverage report…\n")
-    subprocess.run([sys.executable, "-m", "coverage", "report", "-m"], check=True)
-    subprocess.run([sys.executable, "-m", "coverage", "html", "-q", "-d", experiment_settings.HTMLCOV_DIR], check=True)
+def generate_coverage_report(strategy: str | None, budget_seconds: int, seed: int):
+    logger.info("Generating JSON coverage report")
 
-def open_coverage_in_browser():
-    abs_path = os.path.abspath(os.path.join(experiment_settings.HTMLCOV_DIR, "index.html"))
-    file_url = f"file://{abs_path}"
-    print()
-    logger.info(f"File URL:\n{file_url}\n")
-    webbrowser.open(file_url)
+    # Generate JSON report from coverage
+    json_report_path = experiment_settings.JSON_DIR + f"/coverage__{strategy}__{budget_seconds}__{seed}.json"
+    subprocess.run([
+        sys.executable, "-m", "coverage", "json", "-o", json_report_path, "-q"
+    ], check=True)
 
-def main(strategy: str | None, budget_seconds: int):
-    logger.info("Starting Pynguin benchmark with strategy: '%s', budget: %d seconds", strategy, budget_seconds)
-    ensure_directories()
+    logger.info(f"JSON coverage report saved to: {json_report_path}")
+
+def merge_coverage_reports() -> pd.DataFrame:
+    json_dir_path = Path(experiment_settings.JSON_DIR)
+    
+    # Pattern to match filenames like: coverage__strategy__budget__seed.json
+    pattern = re.compile(r"coverage__(.*?)__(\d+)__(\d+)\.json")
+    
+    records = []
+
+    for json_file in json_dir_path.glob("coverage__*__*__*.json"):
+        match = pattern.match(json_file.name)
+        if not match:
+            continue
+
+        strategy, budget_seconds, seed = match.groups()
+        budget_seconds = int(budget_seconds)
+        seed = int(seed)
+
+        try:
+            with open(json_file, 'r') as f:
+                data = json.load(f)
+
+            timestamp = data.get("meta", {}).get("timestamp")
+
+            for file_name, file_data in data.get("files", {}).items():
+                record = {
+                    "file_name": file_name,
+                    "summary_num_statements": file_data.get("summary", {}).get("num_statements"),
+                    "summary_missing_lines": file_data.get("summary", {}).get("missing_lines"),
+                    "summary_excluded_lines": file_data.get("summary", {}).get("excluded_lines"),
+                    "summary_percent_covered": file_data.get("summary", {}).get("percent_covered"),
+                    "budget_seconds": budget_seconds,
+                    "seed": seed,
+                    "strategy": strategy,
+                    "timestamp": timestamp
+                }
+                records.append(record)
+
+        except Exception as e:
+            print(f"Failed to process {json_file}: {e}")
+
+    return pd.DataFrame(records)
+
+def main(strategies: list[str | None], budget_seconds: int, seeds: list[int]):
+    start_time = time.perf_counter()
     modules = find_python_modules(experiment_settings.EXAMPLES_DIR)
     if not modules:
         logger.warning(
@@ -122,21 +165,51 @@ def main(strategy: str | None, budget_seconds: int):
             experiment_settings.EXAMPLES_DIR
         )
         return
+
+    for strategy in strategies:
+        for seed in seeds:
+            ensure_directories()
+            logger.info("Starting Pynguin benchmark with strategy: '%s', budget: %d seconds, seed: %d", strategy, budget_seconds, seed)
+            # 1. Generate tests for all modules
+            for mod_name, _ in modules:
+                run_pynguin_on_module(
+                    mod_name,
+                    strategy=strategy,
+                    budget_seconds=budget_seconds,
+                    seed=seed
+                )
+
+            # 2. Run all tests in one coverage run
+            coverage_successful = run_tests_and_coverage()
+
+            # 3. Generate and display coverage report
+            if coverage_successful:
+                generate_coverage_report(
+                    strategy=strategy,
+                    budget_seconds=budget_seconds,
+                    seed=seed
+                )
+            print("\n\n")
     
-    # 1. Generate tests for all modules
-    for mod_name, _ in modules:
-        run_pynguin_on_module(mod_name, strategy=strategy, budget_seconds=budget_seconds)
-
-    # 2. Run all tests in one coverage run
-    coverage_successful = run_tests_and_coverage()
-
-    # 3. Generate and display coverage report
-    if coverage_successful:
-        generate_coverage_report()
-        open_coverage_in_browser()
+    logger.info("All modules processed -> Merging coverage reports.")
+    merged_reports = merge_coverage_reports()
+    logger.info("Save merged coverage reports to CSV and Excel files.")
+    merged_reports.to_csv(
+        experiment_settings.JSON_DIR + "/merged_coverage_reports.csv",
+        index=False
+    )
+    merged_reports.to_excel(
+        experiment_settings.JSON_DIR + "/merged_coverage_reports.xlsx",
+        index=False
+    )
+    logger.info(
+        "Pynguin benchmark completed in %.2f seconds.",
+        time.perf_counter() - start_time
+    )
 
 if __name__ == "__main__":
     main(
-        strategy=experiment_settings.CUSTOM_SEEDING_STRATEGY,
-        budget_seconds=experiment_settings.BUDGET_PER_FILE_IN_SECONDS
+        strategies=experiment_settings.CUSTOM_SEEDING_STRATEGIES,
+        budget_seconds=experiment_settings.BUDGET_PER_FILE_IN_SECONDS,
+        seeds=experiment_settings.RANDOM_SEEDS
     )

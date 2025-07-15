@@ -2,7 +2,8 @@
 # Paths to exclude
 exclude = [
     "notebooks/",
-    "**/__init__.py"
+    "**/__init__.py",
+    "Python_master"
 ]
 [tool.ruff.lint]
 extend-select = ["I"]

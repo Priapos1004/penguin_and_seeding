@@ -23,7 +23,7 @@ class ExperimentSettings():
     ### Experiment Configuration ###
     ################################
 
-    # Custom seeding strategy to use, or None for no custom seeding
+    # Custom seeding strategies to use, or None for no custom seeding
     # Example custom seeding strategy: 'simple'
     CUSTOM_SEEDING_STRATEGIES: list[str | None] = ["tree_traverse", None]
     # Budget in seconds for each file

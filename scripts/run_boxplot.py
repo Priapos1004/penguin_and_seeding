@@ -1,6 +1,7 @@
 import os
-import pandas as pd
+
 import matplotlib.pyplot as plt
+import pandas as pd
 
 # CSV-Dateien und ihre Kurzbezeichnungen
 csv_info = {

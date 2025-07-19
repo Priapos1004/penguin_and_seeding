@@ -560,22 +560,22 @@ class TreeTraverseStrategy(BaseStrategy):
         and their corresponding values.
         """
         # Checks for if-node
+        # Ignores elif-statements and only handles if-statements
         if isinstance(node, If):
-            # Ignores elif-statements and only handles if-statements
-            current_state = self.find_parameters(node.test, current_state)
-
-            # If-statements starting with a not operation need to call the operatiuons
-            if isinstance(node.test, UnaryOp):
-                current_state = self.find_parameters(node.test.operand, current_state)
             # Or-Logic is in 'visit' and not 'find_parameters' as it is
             # about traversing and not extraction of information
-            elif isinstance(node.test, BoolOp) and node.test.op == "or":
+            if isinstance(node.test, BoolOp) and node.test.op == "or":
                 old_state = copy.deepcopy(current_state)
                 current_state = []
                 for condition in node.test.values:
                     new_state = self.find_parameters(condition, copy.deepcopy(old_state))
                     current_state.extend(self.call_list_visit(node.body, new_state))
             else:
+                # If-statements starting with a not operation need to call the operations
+                if isinstance(node.test, UnaryOp):
+                    current_state = self.find_parameters(node.test.operand, current_state)
+                else:
+                    current_state = self.find_parameters(node.test, current_state)
                 # If it is not an or-logic, we just traverse the body of the if-statement
                 current_state = self.call_list_visit(node.body, current_state)
         else:

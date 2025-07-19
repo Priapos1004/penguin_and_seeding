@@ -6,9 +6,9 @@ class ExperimentSettings():
     involved approaches, and other relevant settings.
     """
     # Root directory of functions under test
-    # "scripts/examples" - 42, 43, 44, 45, 48
+    # "scripts/examples" - seeds: 42, 43, 44, 45, 48
     # "scripts/repos/string_utils"
-    # "scripts/repos/Python_master/strings"  - 42, 43, 44, 45, 46
+    # "scripts/repos/Python_master/strings"  - seeds: 42, 43, 44, 45, 46
     EXAMPLES_DIR: str = "scripts/repos/Python_master/strings"
     # Directory where the resulting test cases will be stored
     RESULTS_DIR: str = "scripts/pynguin_results"
